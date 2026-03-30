@@ -1,5 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+class DatabaseConnection {
+  private static instance: PrismaClient | null = null;
 
-export default prisma;
+  private constructor() {}
+
+  public static getInstance(): PrismaClient {
+    if (!DatabaseConnection.instance) {
+      DatabaseConnection.instance = new PrismaClient();
+    }
+    return DatabaseConnection.instance;
+  }
+}
+
+export default DatabaseConnection.getInstance();
