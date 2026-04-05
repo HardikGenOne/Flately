@@ -1,20 +1,23 @@
 # Phase 1 Environment Config Spec
 
+> STATUS: Historical artifact. Phase 1 completed.
+> Current source of truth: [../project-setup.md](../project-setup.md), [../frontend-guide.md](../frontend-guide.md), [../architecture.md](../architecture.md).
+
 Date: 2026-04-04
-Scope: PA-006 only
+Scope: PA-006 only (completed)
 
 ## Objective
 
 Define one frontend environment configuration contract for API, socket, and Auth0 wiring so runtime settings are environment-driven and not hardcoded in source.
 
-## Current Verified State
+## Completed State
 
-- API client base URL is hardcoded to `http://localhost:4000`.
-- Socket client URL is hardcoded to `http://localhost:4000`.
-- Auth0 audience is hardcoded to `http://localhost:4000`.
-- Auth0 domain and client ID are also currently hardcoded in frontend bootstrap.
+- API base URL is runtime-config driven (`runtimeConfig.apiBaseUrl`).
+- Socket URL is runtime-config driven (`runtimeConfig.socketUrl`).
+- Auth0 domain/client/audience are runtime-config driven.
+- Frontend setup now documents `.env.example` variables for local and deployment environments.
 
-## Required Frontend Environment Variables (Target)
+## Required Frontend Environment Variables
 
 - `VITE_API_BASE_URL`
 - `VITE_SOCKET_URL`
@@ -22,13 +25,13 @@ Define one frontend environment configuration contract for API, socket, and Auth
 - `VITE_AUTH0_CLIENT_ID`
 - `VITE_AUTH0_AUDIENCE`
 
-## Contract Rules
+## Contract Rules (Retained)
 
-- No transport or Auth0 host/audience literals should remain in frontend runtime wiring.
-- Development, staging, and production must be switchable by environment values only.
-- Variable names must be documented and stable for CI/CD and local setup.
+- No transport or Auth0 host/audience literals in frontend runtime wiring.
+- Development, staging, and production are switchable by environment values only.
+- Variable names remain stable for CI/CD and local setup.
 
-## Acceptance for PA-006
+## Completion Summary
 
-- Environment variable contract is published and referenced by Phase 1 validation gates.
-- Hardcoded localhost/audience values are removed during implementation phase.
+- Environment variable contract is published in canonical docs.
+- RuntimeConfig now acts as the single frontend config boundary.

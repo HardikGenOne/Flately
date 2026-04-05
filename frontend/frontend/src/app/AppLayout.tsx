@@ -1,35 +1,18 @@
 // @ts-nocheck
-import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { motion } from 'framer-motion'
 
 import { AppSidebar } from '../components/layout/AppSidebar'
 
-const spring = { type: 'spring', stiffness: 300, damping: 30 }
-
 export default function AppLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="flex min-h-screen bg-surface-50 text-slate-900">
       {/* Sidebar */}
-      <AppSidebar 
-        isCollapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-      />
+      <AppSidebar />
       
       {/* Main Content */}
-      <motion.main
-        className="min-h-screen"
-        initial={false}
-        animate={{ 
-          marginLeft: sidebarCollapsed ? 80 : 256,
-          paddingTop: 0
-        }}
-        transition={spring}
-      >
+      <main className="flex min-h-screen min-w-0 flex-1 bg-canvas">
         <Outlet />
-      </motion.main>
+      </main>
     </div>
   )
 }

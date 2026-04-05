@@ -27,29 +27,39 @@ function StatusBadge({ status }) {
 export default function MatchesPage() {
   const { getAccessTokenSilently } = useAuth0()
   const [matches, setMatches] = useState(DEMO_MATCHES)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
+    setErrorMessage('')
     apiRequest('/matches/me', {}, getAccessTokenSilently)
       .then(data => { if (data?.length > 0) setMatches(data) })
-      .catch(() => {})
+      .catch(() => { setErrorMessage('Unable to load matches right now.') })
+      .finally(() => setIsLoading(false))
   }, [getAccessTokenSilently])
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
       {/* Header */}
       <div className="flex flex-col bg-canvas border-b border-neutral-border">
-        <div className="px-8 pt-8 pb-4">
+        <div className="px-4 pb-4 pt-6 md:px-6 md:pt-8">
           <h2 className="text-2xl font-bold tracking-tight text-[#111318]">Match Archives</h2>
           <p className="text-[#616f89] text-sm">Review past interactions and manage archived roommate candidates.</p>
         </div>
-        <div className="px-8 pb-6 pt-2 flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3 px-4 pb-6 pt-2 md:px-6">
           <div className="flex-1 min-w-[240px] max-w-sm">
             <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Search</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span className="material-symbols-outlined text-gray-400 text-[20px]">search</span>
               </div>
-              <input className="block w-full pl-10 pr-3 py-2 border border-neutral-border rounded-lg text-sm bg-white placeholder-gray-400 focus:outline-none focus:border-[#166534] focus:ring-1 focus:ring-[#166534] transition-all hover:border-gray-400" placeholder="Search by name or location..." type="text" />
+              <input
+                className="block w-full cursor-not-allowed border border-neutral-border rounded-lg bg-neutral-100 pl-10 pr-3 py-2 text-sm text-gray-400 placeholder-gray-400"
+                placeholder="Search coming soon"
+                type="text"
+                disabled
+                aria-label="Search matches coming soon"
+              />
             </div>
           </div>
           {[{ label: 'Status', options: ['All Statuses', 'Matched', 'Passed', 'Archived'] },
@@ -58,22 +68,55 @@ export default function MatchesPage() {
             .map(f => (
             <div key={f.label} className="w-40">
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">{f.label}</label>
-              <select className="block w-full py-2 pl-3 pr-8 border border-neutral-border bg-white rounded-lg text-sm focus:outline-none focus:border-[#166534] focus:ring-1 focus:ring-[#166534] hover:border-gray-400 cursor-pointer">
+              <select
+                className="block w-full cursor-not-allowed border border-neutral-border rounded-lg bg-neutral-100 py-2 pl-3 pr-8 text-sm text-gray-500"
+                disabled
+                aria-label={`${f.label} filter coming soon`}
+              >
                 {f.options.map(o => <option key={o}>{o}</option>)}
               </select>
             </div>
           ))}
-          <button className="h-[38px] px-4 rounded-lg text-xs font-medium text-gray-500 hover:text-[#166534] hover:bg-mint transition-colors border border-transparent hover:border-[#166534]/10">Reset Filters</button>
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="h-[38px] cursor-not-allowed rounded-lg border border-transparent px-4 text-xs font-medium text-gray-400"
+            title="Filters are preview-only in this phase"
+          >
+            Reset Filters
+          </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto p-8 pt-6">
-        <div className="bg-white border border-neutral-border rounded-lg overflow-hidden min-w-[900px] shadow-sm">
-          <table className="w-full text-left border-collapse">
+      <div className="flex-1 overflow-auto p-4 pt-5 md:p-6 md:pt-6">
+        <div className="mx-auto w-full max-w-[1500px]">
+          {isLoading ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-sm" aria-busy="true" aria-live="polite">
+              <div className="flex flex-col items-center gap-3" role="status">
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#166534]" />
+                <p className="text-xs font-mono text-slate-500">Loading match history...</p>
+              </div>
+            </div>
+          ) : errorMessage ? (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-6 text-center shadow-sm" role="alert">
+              <p className="text-sm font-semibold text-amber-900">Could not load matches.</p>
+              <p className="text-xs text-amber-800">{errorMessage}</p>
+            </div>
+          ) : matches.length === 0 ? (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-6 text-center shadow-sm">
+              <p className="text-sm font-semibold text-slate-700">No matches to review yet.</p>
+              <p className="text-xs text-slate-500">Once new match activity appears, it will be listed here.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-hidden rounded-xl border border-neutral-border bg-white shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[860px] w-full border-collapse text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-neutral-border text-xs text-gray-500 uppercase tracking-wider font-semibold">
-                <th className="px-6 py-3 w-16"><input className="h-4 w-4 rounded border-gray-300 text-[#166534] focus:ring-[#166534]" type="checkbox" /></th>
+                <th className="px-6 py-3 w-16"><input className="h-4 w-4 cursor-not-allowed rounded border-gray-300 text-[#166534] focus:ring-[#166534]" type="checkbox" disabled aria-label="Bulk select coming soon" /></th>
                 <th className="px-6 py-3">Candidate</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">Match %</th>
@@ -86,7 +129,7 @@ export default function MatchesPage() {
               {matches.map(m => (
                 <tr key={m.id} className={`group transition-colors ${m.status === 'Matched' ? 'hover:bg-mint/30' : 'hover:bg-gray-50'}`}>
                   <td className="px-6 py-3">
-                    <input className="h-4 w-4 rounded border-gray-300 text-[#166534] focus:ring-[#166534] opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox" />
+                    <input className="h-4 w-4 cursor-not-allowed rounded border-gray-300 text-[#166534] focus:ring-[#166534] opacity-40" type="checkbox" disabled aria-label={`Selection for ${m.name} coming soon`} />
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center gap-3">
@@ -114,14 +157,14 @@ export default function MatchesPage() {
                   </td>
                   <td className="px-6 py-3"><span className="text-sm font-mono text-gray-500">{m.lastActive}</span></td>
                   <td className="px-6 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 text-gray-400 hover:text-[#166534] hover:bg-mint rounded transition-colors" title="Re-connect">
+                    <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <button className="cursor-not-allowed p-1.5 text-gray-400 rounded transition-colors" title="Re-connect coming soon" disabled aria-label={`Re-connect with ${m.name} coming soon`}>
                         <span className="material-symbols-outlined text-[20px]">cached</span>
                       </button>
-                      <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors" title="Archive">
+                      <button className="cursor-not-allowed p-1.5 text-gray-400 rounded transition-colors" title="Archive coming soon" disabled aria-label={`Archive ${m.name} coming soon`}>
                         <span className="material-symbols-outlined text-[20px]">archive</span>
                       </button>
-                      <button className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete">
+                      <button className="cursor-not-allowed p-1.5 text-gray-400 rounded transition-colors" title="Delete coming soon" disabled aria-label={`Delete ${m.name} coming soon`}>
                         <span className="material-symbols-outlined text-[20px]">delete</span>
                       </button>
                     </div>
@@ -130,13 +173,17 @@ export default function MatchesPage() {
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="flex items-center justify-between pt-4 text-xs text-[#616f89]">
-          <span>Showing 1-{matches.length} of {matches.length} candidates</span>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1 border border-neutral-border rounded bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors" disabled>Previous</button>
-            <button className="px-3 py-1 border border-neutral-border rounded bg-white hover:bg-gray-50 transition-colors">Next</button>
-          </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-4 text-xs text-[#616f89]">
+                <span>Showing 1-{matches.length} of {matches.length} candidates</span>
+                <div className="flex items-center gap-2">
+                  <button className="cursor-not-allowed rounded border border-neutral-border bg-white px-3 py-1 transition-colors disabled:opacity-50" disabled aria-disabled="true" title="Pagination is not wired in this phase">Previous</button>
+                  <button className="cursor-not-allowed rounded border border-neutral-border bg-white px-3 py-1 transition-colors disabled:opacity-50" disabled aria-disabled="true" title="Pagination is not wired in this phase">Next</button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

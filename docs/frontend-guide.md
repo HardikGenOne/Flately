@@ -22,7 +22,7 @@ frontend/frontend/
 │   ├── app/
 │   │   ├── router.tsx            # All route definitions
 │   │   ├── store.ts              # Redux store with 6 slices
-│   │   ├── AppLayout.tsx         # Sidebar + animated content outlet
+│   │   ├── AppLayout.tsx         # Sidebar + stable flex content shell
 │   │   └── ProtectedRoute.tsx    # Auth guard component
 │   ├── pages/
 │   │   ├── Landing.tsx           # Public marketing page
@@ -113,6 +113,13 @@ The UI follows a **data-dense operational dashboard** aesthetic:
 - Session IDs and system status indicators
 - Code-like labels (e.g., `// SELECT_GENDER_IDENTITY`, `01_BASIC_INTEL`)
 
+### Design-1 layout coherence baseline (2026-04-05)
+
+- App shell uses a stable flex geometry: fixed-width sidebar + `min-w-0` content region.
+- Core app pages (dashboard/discovery/matches/chat) use consistent outer rhythm (`p-4 md:p-6`) and bounded desktop containers.
+- Multi-panel pages use explicit overflow boundaries and responsive panel stacking where needed.
+- Discovery, matches, and chat now share a common loading/empty visual language (spinner card + dashed empty-state card).
+
 ---
 
 ## 4. Page-by-Page Breakdown
@@ -144,6 +151,10 @@ Key interactions:
    - Profile Visibility (sparkline chart, conversion rate, avg time)
    - Match Efficiency (progress bars: response rate, profile completion)
 3. **Algorithm Criteria** — Checklist of location/lifestyle criteria + map thumbnail
+
+Design-1 notes:
+- Outer page rhythm normalized to match other app surfaces.
+- Desktop content width aligned with shared max container sizing for shell consistency.
 
 All data is currently **demo/hardcoded**. Not wired to API yet.
 
@@ -206,16 +217,27 @@ function TileRadio({ name, value, checked, onChange, icon, label, desc, size }) 
 **File**: `features/discovery/DiscoveryPage.tsx`
 
 Split-panel layout:
-- **Left (360px)**: Queue panel — scrollable list of candidate cards with scores
+- **Left (320px-360px responsive)**: Queue panel — scrollable list of candidate cards with scores
 - **Right (flex)**: Profile detail — photos, bio, tags, data grid (budget, timeline, lifestyle, map)
+
+Design-1 notes:
+- Shared loading/empty states added without changing discovery data flow.
+- Panel container now has bounded overflow and responsive stacking behavior on smaller widths.
+
+Design-2 notes:
+- Loading/empty/error states now render explicit status copy and retry handling for load failures.
+- Non-wired queue controls (search, filters, prev/next shortcuts) are intentionally disabled/labeled to avoid false affordances.
+- Queue rows use keyboard-focusable button semantics for clearer interaction and accessibility.
 
 Data sources:
 - **Initial**: Hardcoded `DEMO_PROFILES` array (5 profiles)
-- **API**: Attempts `GET /discovery` on mount; replaces demo data if response has data
+- **API**: Uses canonical `GET /discovery/feed` via `discovery.transport.ts`
+- **Compatibility**: Backend still accepts `GET /discovery` as a legacy alias
 
 Actions:
 - **Pass**: Remove from queue → `handlePass()`
-- **Connect**: `POST /matches/connect/:id` → then remove from queue
+- **Connect (canonical)**: `POST /discovery/swipe` with `{ toUserId, action: "like" }`
+- **Connect (legacy alias)**: `POST /matches/connect/:toUserId` remains available for backward compatibility
 
 ---
 
@@ -228,6 +250,15 @@ Data table with:
 - Table columns: Candidate, Status, Match %, Engagement (SVG sparkline), Last Active, Actions
 - Status badges: `Matched` (green), `Passed` (gray), `Archived` (amber)
 - Hover actions: Re-connect, Archive, Delete
+
+Design-1 notes:
+- Shared loading/empty states added for archive list rendering.
+- Table container uses explicit horizontal overflow handling with a minimum table width for readability.
+
+Design-2 notes:
+- Error state rendering added for matches fetch failure, alongside readable loading and empty state copy.
+- Non-wired filter/search/table utility controls are disabled and relabeled as coming soon.
+- Pagination controls are explicitly disabled pending data paging integration.
 
 Data sources:
 - **Initial**: Hardcoded `DEMO_MATCHES` array (5 matches)
@@ -244,16 +275,25 @@ Data sources:
 - **Center (flex)**: Message bubbles (green for sent, white for received) + input
 - **Right (320px, xl only)**: Match Intel panel — score, budget, tags, private notes
 
+Design-1 notes:
+- Shared loading/empty states added for no-conversation and initial load conditions.
+- Chat shell now uses a bounded panel container with consistent page rhythm and responsive overflow behavior.
+
+Design-2 notes:
+- Error state rendering with retry added for chat initialization failures.
+- Thread rows now use button semantics and focus-visible states for keyboard navigation clarity.
+- Non-wired affordances (thread search/tabs, utility actions, intel-side actions) are disabled or relabeled to align visuals with behavior.
+
 **Real-time flow:**
 1. On mount: Fetch matches → build conversations list
 2. On active chat: `GET /chat/:matchId` → load messages
-3. Socket: `emit('join', conversationId)` to join room
-4. Send: Optimistic UI (append temp message) + `emit('send_message', ...)`
-5. Receive: `on('new_message', ...)` → append to messages array
+3. Socket join: `emit('joinRoom', conversationId)` (canonical)
+4. Send: Optimistic UI + `emit('sendMessage', ...)` (canonical)
+5. Receive: subscribe to `message` (canonical) and `new_message` (alias) during compatibility window
 
 ```typescript
 // socket.ts
-export const socket = io("http://localhost:4000");
+export const socket = io(runtimeConfig.socketUrl);
 ```
 
 ---
@@ -262,12 +302,13 @@ export const socket = io("http://localhost:4000");
 
 **File**: `components/layout/AppSidebar.tsx`
 
-Fixed sidebar (w-64 / 256px) with:
+Fixed sidebar (w-64 / 256px, sticky in shell) with:
 
 Navigation items:
 | Icon | Label | Path | Badge |
 |---|---|---|---|
 | `dashboard` | Dashboard | `/app` | — |
+| `explore` | Discovery | `/app/discover` | — |
 | `group` | Matches | `/app/matches` | "12" |
 | `chat` | Messages | `/app/chat` | Green dot |
 | `calendar_month` | Calendar | `/app/calendar` | — |
@@ -281,6 +322,19 @@ Bottom items:
 Active state: `bg-mint text-[#166534] border-emerald-100`
 
 User section at bottom: Auth0 user avatar + name + monospace ID.
+
+### Route Coverage Matrix (Router vs Sidebar)
+
+| Route | Router Defined | Sidebar Link | Status |
+|---|---|---|---|
+| `/app` | Yes | Yes (Dashboard) | Resolved |
+| `/app/discover` | Yes | Yes (Discovery) | Resolved via primary sidebar link (D1-007) |
+| `/app/matches` | Yes | Yes (Matches) | Resolved |
+| `/app/chat/:matchId?` | Yes | Yes (`/app/chat`) | Resolved |
+| `/app/onboarding` | Yes | No | Intentional onboarding flow route |
+| `/app/calendar` | Yes (placeholder) | Yes (Calendar) | Resolved via placeholder route (Policy A, UI-001) |
+| `/app/filters` | Yes (placeholder) | Yes (Filters) | Resolved via placeholder route (Policy A, UI-002) |
+| `/app/settings` | Yes (placeholder) | Yes (Settings) | Resolved via placeholder route (Policy A, UI-003) |
 
 ---
 
@@ -453,3 +507,15 @@ export interface Match {
 ```
 
 **Note**: The `<script>` tag references `/src/main.jsx` but the actual file is `main.tsx`. Vite handles this via its JSX transform.
+
+---
+
+## 10. Minimal UI Redesign Execution Plan
+
+Frontend redesign execution is tracked in:
+- `docs/minimal-ui-redesign-plan.md`
+
+Use that plan as the implementation source for:
+- Route closure work for calendar, filters, and settings links
+- Verification-first rollout gates across matching, discovery, matches, and chat flows
+- Design-0, Design-1, and Design-2 phased delivery checkpoints

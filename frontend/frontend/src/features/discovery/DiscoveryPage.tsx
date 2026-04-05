@@ -8,20 +8,38 @@ export default function DiscoveryPage() {
   const { getAccessTokenSilently } = useAuth0()
   const [profiles, setProfiles] = useState([])
   const [selectedId, setSelectedId] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [refreshSeed, setRefreshSeed] = useState(0)
   const selected = profiles.find(p => p.id === selectedId) || profiles[0]
 
   useEffect(() => {
     let isMounted = true
+    setIsLoading(true)
+    setErrorMessage('')
     fetchDiscoveryFeed(getAccessTokenSilently)
       .then(data => {
-        if (isMounted && data?.length > 0) {
-          setProfiles(data)
-          setSelectedId(data[0].id)
+        if (isMounted) {
+          if (data?.length > 0) {
+            setProfiles(data)
+            setSelectedId(data[0].id)
+          } else {
+            setProfiles([])
+            setSelectedId('')
+          }
+          setIsLoading(false)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (isMounted) {
+          setProfiles([])
+          setSelectedId('')
+          setErrorMessage('Unable to load discovery feed right now.')
+          setIsLoading(false)
+        }
+      })
     return () => { isMounted = false }
-  }, [getAccessTokenSilently])
+  }, [getAccessTokenSilently, refreshSeed])
 
   const handlePass = () => {
     const remaining = profiles.filter(p => p.id !== selectedId)
@@ -33,34 +51,85 @@ export default function DiscoveryPage() {
     handlePass()
   }
 
+  if (isLoading) {
+    return (
+      <section className="flex flex-1 p-4 md:p-6" aria-busy="true" aria-live="polite">
+        <div className="flex min-h-[280px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="flex flex-col items-center gap-3" role="status">
+            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#166534]" />
+            <p className="text-xs font-mono text-slate-500">Loading discovery queue...</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <section className="flex flex-1 p-4 md:p-6">
+        <div className="flex min-h-[280px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-6 text-center shadow-sm" role="alert">
+          <p className="text-sm font-semibold text-amber-900">Could not load discovery profiles.</p>
+          <p className="text-xs text-amber-800">{errorMessage}</p>
+          <button
+            type="button"
+            onClick={() => setRefreshSeed((seed) => seed + 1)}
+            className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   if (!selected) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-white text-sm text-gray-500">
-        No profiles available right now.
-      </div>
+      <section className="flex flex-1 p-4 md:p-6">
+        <div className="flex min-h-[280px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-6 text-center shadow-sm" role="status" aria-live="polite">
+          <p className="text-sm font-semibold text-slate-700">No profiles available right now.</p>
+          <p className="text-xs text-slate-500">Check back later to see new roommate candidates.</p>
+        </div>
+      </section>
     )
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden h-full">
+    <section className="flex h-full min-w-0 flex-1 p-4 md:p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm lg:flex-row">
       {/* Queue Panel */}
-      <section className="w-[360px] flex flex-col bg-white border-r border-neutral-200 overflow-hidden shrink-0">
+      <section className="flex w-full shrink-0 flex-col overflow-hidden border-b border-neutral-200 bg-white lg:w-[320px] lg:border-b-0 lg:border-r xl:w-[360px]">
         <div className="p-4 border-b border-neutral-200 space-y-3">
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">search</span>
-            <input className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#166534] focus:border-[#166534] placeholder:text-gray-400 font-mono transition-shadow" placeholder="Search criteria..." type="text" />
+            <input
+              className="w-full cursor-not-allowed pl-10 pr-4 py-2.5 bg-neutral-100 border border-neutral-200 rounded-lg text-sm text-gray-400 placeholder:text-gray-400 font-mono"
+              placeholder="Search coming soon"
+              type="text"
+              disabled
+              aria-label="Search criteria coming soon"
+            />
           </div>
           <div className="flex items-center justify-between pt-1">
             <h3 className="font-bold text-[11px] tracking-wider text-gray-500 uppercase">Queue ({profiles.length})</h3>
-            <button className="flex items-center gap-1 text-[11px] font-bold uppercase text-gray-500 hover:text-[#166534] transition-colors">
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="flex cursor-not-allowed items-center gap-1 text-[11px] font-bold uppercase text-gray-400"
+              title="Filters are not wired in this phase"
+            >
               <span className="material-symbols-outlined text-[16px]">tune</span> Filters
             </button>
           </div>
+          <p className="text-[10px] font-mono text-gray-400 uppercase tracking-wide">Search and filters are preview-only.</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {profiles.map((p, i) => (
-            <div key={p.id} onClick={() => setSelectedId(p.id)}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer relative group transition-all ${
+        <div className="max-h-[320px] flex-1 overflow-y-auto p-3 space-y-2 lg:max-h-none">
+          {profiles.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setSelectedId(p.id)}
+              className={`w-full text-left flex items-center gap-3 p-3 rounded-lg cursor-pointer relative group transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-1 ${
                 p.id === selectedId ? 'bg-mint border border-[#166534] shadow-sm' : 'border border-transparent hover:border-neutral-200 hover:bg-neutral-50'
               }`}
             >
@@ -75,15 +144,15 @@ export default function DiscoveryPage() {
                 </div>
                 <p className={`text-xs truncate mt-0.5 font-mono ${p.id === selectedId ? 'text-[#166534]/70' : 'text-gray-500'}`}>{p.occupation} • {p.age}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </section>
 
       {/* Profile Detail */}
-      <section className="flex-1 flex flex-col bg-white relative overflow-hidden">
+      <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto w-full p-8 pb-32">
+          <div className="mx-auto w-full max-w-5xl p-5 pb-32 md:p-8">
             <div className="flex gap-8 mb-10">
               <div className="shrink-0">
                 <div className="bg-center bg-no-repeat bg-cover rounded-lg size-32 border border-neutral-200" style={{ backgroundImage: `url('${selected.img}')` }} />
@@ -179,24 +248,37 @@ export default function DiscoveryPage() {
         {/* Action Bar */}
         <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-neutral-200 p-4 md:px-8 md:py-5 flex justify-between items-center z-20">
           <div className="flex items-center gap-3 text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wider">
-            <button className="flex items-center gap-1 hover:text-[#166534] transition-colors py-2 px-3 hover:bg-neutral-50 rounded">
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="flex cursor-not-allowed items-center gap-1 py-2 px-3 rounded"
+              title="Previous and next queue shortcuts are not wired in this phase"
+            >
               <span className="border border-gray-300 rounded w-5 h-5 flex items-center justify-center text-xs">←</span> Prev
             </button>
             <div className="h-4 w-px bg-neutral-200" />
-            <button className="flex items-center gap-1 hover:text-[#166534] transition-colors py-2 px-3 hover:bg-neutral-50 rounded">
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="flex cursor-not-allowed items-center gap-1 py-2 px-3 rounded"
+              title="Previous and next queue shortcuts are not wired in this phase"
+            >
               Next <span className="border border-gray-300 rounded w-5 h-5 flex items-center justify-center text-xs">→</span>
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handlePass} className="h-12 px-8 rounded-lg border-2 border-neutral-200 text-neutral-900 font-bold hover:bg-neutral-50 transition-colors uppercase tracking-wide text-xs flex items-center justify-center gap-2">
+            <button onClick={handlePass} className="h-12 px-8 rounded-lg border-2 border-neutral-200 text-neutral-900 font-bold hover:bg-neutral-50 transition-colors uppercase tracking-wide text-xs flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500">
               <span className="material-symbols-outlined text-[18px]">close</span> Pass
             </button>
-            <button onClick={handleConnect} className="h-12 px-8 rounded-lg bg-[#166534] text-white font-bold hover:bg-[#14532d] transition-colors uppercase tracking-wide text-xs shadow-sm flex items-center justify-center gap-2">
+            <button onClick={handleConnect} className="h-12 px-8 rounded-lg bg-[#166534] text-white font-bold hover:bg-[#14532d] transition-colors uppercase tracking-wide text-xs shadow-sm flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-1">
               <span className="material-symbols-outlined text-[18px]">check</span> Connect
             </button>
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </section>
   )
 }

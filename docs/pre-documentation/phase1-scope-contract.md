@@ -1,40 +1,32 @@
 # Phase 1 Scope Contract
 
+> STATUS: Historical artifact. Phase 1 completed.
+> Current source of truth: [../api-reference.md](../api-reference.md), [../frontend-guide.md](../frontend-guide.md), [../project-setup.md](../project-setup.md).
+
 Date: 2026-04-04
-In-scope IDs: PA-001, PA-006
+In-scope IDs: PA-001, PA-006 (completed)
 
 ## Scope Statement
 
-Phase 1 is limited to:
+Phase 1 covered:
 - PA-001: align frontend and backend contracts for discovery/connect/chat transport boundaries (REST and socket naming).
 - PA-006: replace hardcoded frontend transport/auth environment values with environment-driven configuration.
 
-## In Scope
+## Finalized Outcomes
 
-- Discovery endpoint contract alignment.
-- Connect/swipe action contract alignment.
-- Socket event name canonicalization plan with compatibility mapping.
-- Frontend config contract for API base URL, socket URL, and Auth0 audience.
+- Discovery canonical route finalized as `GET /discovery/feed` with `GET /discovery` alias retained.
+- Swipe canonical route finalized as `POST /discovery/swipe` with `POST /matches/connect/:toUserId` alias retained.
+- Socket canonical events finalized as `joinRoom`, `sendMessage`, `message` with aliases retained.
+- Frontend runtime config finalized through VITE environment variables and `runtimeConfig`.
 
-## Out of Scope
+## Out of Scope (as executed)
 
-- PA-002, PA-003, PA-004, PA-005.
 - Matching algorithm behavior changes.
 - Database schema changes.
-- Backend business-rule refactors beyond contract compatibility work.
+- Backend business-rule refactors beyond contract compatibility.
 
-## Current Baseline (Verified)
+## Completion Summary
 
-- Frontend discovery read path: `/discovery`.
-- Frontend connect action path: `/matches/connect/:id`.
-- Backend discovery paths: `/discovery/feed` and `/discovery/swipe`.
-- Backend matches path: `/matches/me`.
-- Chat socket runtime events: `join`, `send_message`, `new_message`.
-- Frontend hardcoded host/audience values point to localhost.
-
-## Phase 1 Exit Criteria
-
-- One documented canonical REST contract for discovery/connect/chat flows.
-- One documented canonical socket event contract with compatibility strategy.
-- One documented frontend environment variable contract replacing hardcoded values.
-- Validation gates defined and ready for implementation phase.
+- One canonical REST contract is documented and implemented with aliases.
+- One canonical socket contract is documented and implemented with aliases.
+- One environment configuration contract is documented and implemented.

@@ -1,26 +1,40 @@
 # Contract Matrix (REST + Socket)
 
+> STATUS: Historical artifact. Phase 1 contract alignment is completed.
+> Current source of truth: [../api-reference.md](../api-reference.md), [../frontend-guide.md](../frontend-guide.md), [../architecture.md](../architecture.md).
+
 Date: 2026-04-04
-Scope: PA-001 only
+Scope: PA-001 only (completed)
 
-## REST Contract Matrix
+## REST Contract Matrix (Finalized)
 
-| Flow | Frontend Call (Current) | Backend Route (Current) | Status | Phase 1 Canonical Contract Target |
+| Flow | Canonical Contract | Legacy Alias | Current Status | Notes |
 |---|---|---|---|---|
-| Discovery feed load | `GET /discovery` | `GET /discovery/feed` | Drift | Define one canonical discovery feed path and keep compatibility mapping during rollout. |
-| Connect/like action | `POST /matches/connect/:id` | `POST /discovery/swipe` (body: `toUserId`, `action`) | Drift | Define one canonical connect/swipe contract and map old callers during transition. |
-| My matches list | `GET /matches/me` | `GET /matches/me` | Aligned | Keep unchanged in Phase 1. |
-| Open chat by match | `GET /chat/:matchId` | `GET /chat/:matchId` | Aligned | Keep unchanged in Phase 1. |
+| Discovery feed load | `GET /discovery/feed` | `GET /discovery` | Completed | Alias is intentionally kept for backward compatibility. |
+| Connect/like action | `POST /discovery/swipe` (body: `toUserId`, `action`) | `POST /matches/connect/:toUserId` | Completed | Alias maps to canonical like-swipe behavior. |
+| My matches list | `GET /matches/me` | None | Completed | No compatibility shim needed. |
+| Open chat by match | `GET /chat/:matchId` | None | Completed | No compatibility shim needed. |
 
-## Socket Contract Matrix
+## Socket Contract Matrix (Finalized)
 
-| Capability | Frontend Runtime Usage | Backend Runtime Usage | Typed Contract Surface | Status | Phase 1 Canonical Contract Target |
-|---|---|---|---|---|---|
-| Join conversation room | `join` | `join` | `join`, `joinRoom` | Partial drift | Select one canonical join event name and map legacy alias. |
-| Send message | `send_message` | `send_message` | `send_message`, `sendMessage` | Partial drift | Select one canonical send event name and map legacy alias. |
-| Receive message | `new_message` | `new_message` | `new_message`, `message` | Partial drift | Select one canonical receive event name and map legacy alias. |
+| Capability | Canonical Event | Legacy Alias | Current Status | Notes |
+|---|---|---|---|---|
+| Join conversation room | `joinRoom` | `join` | Completed | Both are accepted during compatibility window. |
+| Send message | `sendMessage` | `send_message` | Completed | Both are accepted during compatibility window. |
+| Receive message | `message` | `new_message` | Completed | Both are emitted during compatibility window. |
 
-## Notes
+## Message Payload Contract
 
-- Runtime chat flow is currently functional on snake_case event names.
-- Type definitions currently carry both snake_case and camelCase names, indicating contract duplication risk.
+| Field | Type | Contract |
+|---|---|---|
+| `id` | string | Stable |
+| `senderId` | string | Stable |
+| `content` | string | Stable |
+| `createdAt` | string (ISO datetime) | Canonical timestamp field |
+| `timestamp` | string (ISO datetime) | Legacy alias field |
+
+## Completion Summary
+
+- Canonical and alias REST contracts are now explicit and implemented.
+- Canonical and alias socket contracts are now explicit and implemented.
+- Compatibility adapters remain in place to avoid breaking existing clients.

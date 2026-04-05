@@ -236,6 +236,10 @@ Sorted by score descending.
 
 Get the discovery feed — ranked potential roommates excluding already-swiped users.
 
+Compatibility contract:
+- Canonical route: `GET /discovery/feed`
+- Legacy alias: `GET /discovery` (same handler, kept for backward compatibility)
+
 **Auth**: Required  
 **Response (200):**
 ```json
@@ -282,6 +286,10 @@ Get the discovery feed — ranked potential roommates excluding already-swiped u
 
 Record a swipe action on a potential roommate.
 
+Compatibility contract:
+- Canonical route: `POST /discovery/swipe`
+- Legacy alias: `POST /matches/connect/:toUserId` (maps to a `like` action)
+
 **Auth**: Required  
 **Request Body:**
 ```json
@@ -306,6 +314,10 @@ Record a swipe action on a potential roommate.
 ```json
 { "success": true }
 ```
+
+Alias response note:
+- `POST /matches/connect/:toUserId` returns `{ "success": true, "matched": boolean }`
+- `POST /discovery/swipe` currently returns `{ "success": true }` while still creating a match on mutual likes.
 
 ---
 
@@ -411,23 +423,41 @@ const socket = io("http://localhost:4000");
 
 | Event | Payload | Description |
 |---|---|---|
-| `join` | `conversationId: string` | Join a conversation room |
-| `send_message` | `{ conversationId, senderId, content }` | Send a message |
+| `joinRoom` | `conversationId: string` | Canonical event: join a conversation room |
+| `sendMessage` | `{ conversationId, senderId, content }` | Canonical event: send a message |
+
+Legacy aliases (still accepted):
+
+| Event | Alias Of |
+|---|---|
+| `join` | `joinRoom` |
+| `send_message` | `sendMessage` |
 
 ### Server → Client Events
 
 | Event | Payload | Description |
 |---|---|---|
-| `new_message` | `{ id, senderId, content, timestamp }` | New message broadcast |
+| `message` | `{ id, senderId, content, createdAt, timestamp }` | Canonical event: new message broadcast |
+
+Legacy alias (still emitted for backward compatibility):
+
+| Event | Alias Of |
+|---|---|
+| `new_message` | `message` |
+
+Payload contract notes:
+- `createdAt` and `timestamp` are both ISO datetime strings.
+- Both fields represent the same persisted message creation time.
 
 ### Message Flow
 
 ```
 Client A sends:
-  socket.emit('send_message', { conversationId, senderId, content })
+  socket.emit('sendMessage', { conversationId, senderId, content })
     → Server receives, persists to DB via prisma.message.create()
-    → Server broadcasts: io.to(conversationId).emit('new_message', {...})
-    → Client B receives via socket.on('new_message', handler)
+    → Server broadcasts canonical: io.to(conversationId).emit('message', payload)
+    → Server also broadcasts alias: io.to(conversationId).emit('new_message', payload)
+    → Client B can receive either event during compatibility window
 ```
 
 ---

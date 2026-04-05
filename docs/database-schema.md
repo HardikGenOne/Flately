@@ -170,7 +170,7 @@ model Swipe {
     id         String   @id @default(auto()) @map("_id") @db.ObjectId
     fromUserId String   @db.ObjectId
     toUserId   String   @db.ObjectId
-    action     String   // "like" | "skip"
+    action     String   // normalized stored actions: "like" | "dislike"
     createdAt  DateTime @default(now())
 
     @@unique([fromUserId, toUserId])
@@ -267,7 +267,9 @@ const userBId = fromUserId < toUserId ? toUserId : fromUserId;
 `'male'` | `'female'` | `'any'`
 
 ### Swipe.action
-`'like'` | `'skip'` (stored as `'like'` / `'dislike'` after normalization)
+- Accepted request actions: `'like'` | `'dislike'` | `'skip'` | `'superlike'`
+- Normalized stored actions: `'like'` | `'dislike'`
+- Normalization rules: `'superlike' -> 'like'`, `'skip' -> 'dislike'`
 
 ---
 

@@ -76,20 +76,19 @@ npm run seed:reset   # Removes all seed data
 2. **Identifier (audience)**: `http://localhost:4000`
 3. **Signing Algorithm**: RS256
 
-### Update Frontend Config
+### Frontend `.env.example`
 
-Edit `frontend/frontend/src/main.tsx`:
+Create `frontend/frontend/.env.example` (and copy values into `frontend/frontend/.env` for local development):
 
-```typescript
-<Auth0Provider
-  domain="<YOUR_AUTH0_DOMAIN>"
-  clientId="<YOUR_CLIENT_ID>"
-  authorizationParams={{
-    redirect_uri: window.location.origin,
-    audience: "http://localhost:4000"
-  }}
->
+```env
+VITE_API_BASE_URL=http://localhost:4000
+VITE_SOCKET_URL=http://localhost:4000
+VITE_AUTH0_DOMAIN=<your-auth0-domain>.us.auth0.com
+VITE_AUTH0_CLIENT_ID=<your-auth0-client-id>
+VITE_AUTH0_AUDIENCE=http://localhost:4000
 ```
+
+Auth0 and transport values are loaded at runtime from `frontend/frontend/src/config/runtimeConfig.ts` and consumed by `main.tsx`, API client, and socket client.
 
 ---
 
@@ -166,6 +165,9 @@ flately-full_stack/
 | `start` | `tsx src/server.ts` | Production start (via tsx) |
 | `build` | `tsc` | Compile TypeScript to `dist/` |
 | `start:prod` | `node dist/server.js` | Run compiled JS |
+| `test` | `vitest run` | Run backend test suite once |
+| `test:watch` | `vitest` | Run backend tests in watch mode |
+| `test:coverage` | `vitest run --coverage` | Run tests with coverage output |
 | `seed` | `tsx prisma/seed.ts` | Seed 8 demo users |
 | `seed:reset` | `tsx prisma/seed.ts --reset` | Remove demo data |
 | `typecheck` | `tsc --noEmit` | Type checking only |
@@ -192,7 +194,8 @@ flately-full_stack/
 | [`api-reference.md`](./api-reference.md) | All REST + Socket.IO endpoints with request/response examples |
 | [`matching-algorithm.md`](./matching-algorithm.md) | Compatibility algorithm deep-dive with formulas and worked examples |
 | [`frontend-guide.md`](./frontend-guide.md) | Frontend architecture, design system, page breakdowns, Redux slices |
-| [`backend-code-reference.md`](./backend-code-reference.md) | Complete annotated source code for every backend module |
+| [`backend-code-reference.md`](./backend-code-reference.md) | Current backend architecture baseline with compatibility snippets |
+| [`minimal-ui-redesign-plan.md`](./minimal-ui-redesign-plan.md) | Forward plan for minimal frontend redesign and verification-first rollout |
 | [`project-setup.md`](./project-setup.md) | This file — setup, scripts, directory structure |
 
 ---

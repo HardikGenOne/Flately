@@ -1,8 +1,5 @@
 // @ts-nocheck
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth0 } from '@auth0/auth0-react'
-import { apiRequest } from '@/services/api'
 
 const SIGNALS = [
   { id: 1, name: 'Sarah Jenkins', time: '09:42', msg: 'Hey, are you still looking for a room in Zone 1? I have a spacious...', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBJnN3sDpHUf7S-YkmZpa2YU5Hrmd6MsJLBUdoLPM-3UkRPsEsoca0Jw7lrM_hwxX8UV9hxG9ee4iyEI-Hx1d1Uch1zIl5GIhVgSi591CYHMq_Z3bejbVqQp4MnOZDyW9py-wLDtrsINft1LTN2tHYKWBtY8DyI5n7di3TGeSiPfuwoI-4Nm8O0OMTRAQag_gz0MsuPS3FYTspgAK29Ze7TfBYPZveHXK0cB3BfaLRLIlqkAOqP1Xrh3Da-nPa12r9Do9IwUkpYqQ' },
@@ -23,6 +20,9 @@ const CRITERIA_LIFE = [
   { label: 'LGBTQ+ Friendly', type: 'MUST', checked: true },
 ]
 
+const MAP_PREVIEW_URL =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCNYdwaEYN4hF3iKT3tuDfghJa-iH4i_AxQP-auZnUVpJJvXp8wlvsaU95bavc5DNtsrIgCNtgLW_WQ9afdhDgeG4njF3guC1G6PZHxJDQ-EjxVLsXOXQLHtiF1euJ44ZDKW7NgplV94LCGWIGvcxdpHcI62mP1nNcaMZ36yXBvmtzKM1pJ_eJLXOuvPvkx33T1jIE6wvmjFBUz6lA2K81bmKTUx7ZBTznVJKs2CzhfihifxPDcyve1pngA4A7qwpg3UtZ4vQWX9Q'
+
 function CriteriaRow({ item }) {
   if (!item.checked) {
     return (
@@ -38,26 +38,25 @@ function CriteriaRow({ item }) {
   return (
     <div className="flex items-center justify-between group p-2 rounded-md hover:bg-mint border border-transparent hover:border-emerald-100 transition-all cursor-default">
       <div className="flex items-center gap-3">
-        <div className="size-5 rounded border border-emerald-200 flex items-center justify-center bg-mint text-[#166534]">
+        <div className="size-5 rounded border border-emerald-200 bg-mint text-primary flex items-center justify-center">
           <span className="material-symbols-outlined text-[16px] font-bold">check</span>
         </div>
         <span className="text-sm font-medium text-slate-700">{item.label}</span>
       </div>
-      <span className="text-[10px] font-mono text-[#166534] bg-mint px-1.5 py-0.5 rounded border border-emerald-100">{item.type}</span>
+      <span className="text-[10px] font-mono text-primary bg-mint px-1.5 py-0.5 rounded border border-emerald-100">{item.type}</span>
     </div>
   )
 }
 
 export default function DashboardPage() {
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-canvas">
+    <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-canvas">
       {/* Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-neutral-border bg-white/50 backdrop-blur-sm z-10 sticky top-0">
+      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-border bg-white/50 px-4 backdrop-blur-sm md:px-6">
         <h2 className="text-lg font-bold tracking-tight text-slate-900">Dashboard</h2>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-mono shadow-sm">
-            <span className="size-2 rounded-full bg-[#166534] animate-pulse" />
-            <span className="text-[#166534] font-bold">SYSTEM: ONLINE</span>
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
+            <span className="text-slate-500">Workspace overview</span>
           </div>
           <button className="size-8 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-sm transition-colors">
             <span className="material-symbols-outlined text-[20px]">notifications</span>
@@ -66,24 +65,25 @@ export default function DashboardPage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-[1400px] mx-auto h-full">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mx-auto h-full w-full max-w-375">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full pb-10">
 
             {/* Col 1 — Incoming Signals */}
             <div className="flex flex-col bg-white border border-neutral-border rounded-md overflow-hidden shadow-sm h-full max-h-[calc(100vh-8rem)]">
               <div className="px-4 py-3 border-b border-neutral-border flex justify-between items-center bg-white">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Incoming Signals</h3>
-                <span className="text-[10px] font-mono bg-mint text-[#166534] px-1.5 py-0.5 rounded border border-emerald-100">5 NEW</span>
+                <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">Recent</span>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {SIGNALS.map(s => (
-                  <div key={s.id} className="group flex gap-3 p-3 border-b border-slate-100 hover:bg-mint cursor-pointer transition-colors relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#166534] opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="size-9 rounded bg-slate-200 flex-shrink-0 bg-cover bg-center border border-slate-200" style={{ backgroundImage: `url('${s.img}')` }} />
+                  <div key={s.id} className="group flex gap-3 p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <div className="size-9 shrink-0 overflow-hidden rounded border border-slate-200 bg-slate-200">
+                      <img src={s.img} alt={`${s.name} avatar`} className="size-full object-cover object-center" loading="lazy" />
+                    </div>
                     <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                       <div className="flex justify-between items-baseline">
-                        <span className="text-sm font-semibold text-slate-900 truncate group-hover:text-[#166534] transition-colors">{s.name}</span>
+                        <span className="text-sm font-semibold text-slate-900 truncate group-hover:text-primary transition-colors">{s.name}</span>
                         <span className="text-[10px] font-mono text-slate-400">{s.time}</span>
                       </div>
                       <p className={`text-xs truncate leading-relaxed ${s.bold ? 'text-slate-800 font-medium' : 'text-slate-500'}`}>{s.msg}</p>
@@ -92,7 +92,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <div className="p-3 border-t border-neutral-border bg-slate-50/50">
-                <Link to="/app/chat" className="block w-full py-2 text-xs font-medium text-slate-600 hover:text-[#166534] border border-slate-200 rounded-md bg-white hover:bg-mint transition-colors shadow-sm text-center">View All Messages</Link>
+                <Link to="/app/chat" className="block w-full py-2 text-xs font-medium text-slate-600 hover:text-primary border border-slate-200 rounded-md bg-white hover:bg-mint transition-colors shadow-sm text-center">View All Messages</Link>
               </div>
             </div>
 
@@ -105,12 +105,12 @@ export default function DashboardPage() {
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Profile Visibility</h3>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-mono font-medium text-slate-900 tracking-tighter">1,284</span>
-                      <span className="text-xs font-mono text-[#166534] flex items-center bg-mint px-1 py-0.5 rounded">
+                      <span className="text-xs font-mono text-primary bg-mint px-1 py-0.5 rounded flex items-center">
                         <span className="material-symbols-outlined text-[14px]">arrow_upward</span> 12%
                       </span>
                     </div>
                   </div>
-                  <div className="px-2 py-1 bg-slate-100 rounded-md border border-slate-200 text-[10px] font-mono text-slate-500">7 DAYS</div>
+                  <div className="px-2 py-1 bg-slate-100 rounded-md border border-slate-200 text-[10px] font-mono text-slate-500">7-day view</div>
                 </div>
                 {/* Chart */}
                 <div className="h-16 w-full mb-4">
@@ -144,19 +144,19 @@ export default function DashboardPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-slate-700">Response Rate</span>
-                      <span className="text-sm font-mono font-bold text-[#166534]">92.8%</span>
+                      <span className="text-sm font-mono font-bold text-primary">92.8%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-100">
-                      <div className="bg-[#166534] h-full rounded-full" style={{ width: '92.8%' }} />
+                      <div className="h-full w-[92.8%] rounded-full bg-primary" />
                     </div>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-slate-700">Profile Completion</span>
-                      <span className="text-sm font-mono font-bold text-[#166534]">100%</span>
+                      <span className="text-sm font-mono font-bold text-primary">100%</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-100">
-                      <div className="bg-[#166534] h-full rounded-full" style={{ width: '100%' }} />
+                      <div className="h-full w-full rounded-full bg-primary" />
                     </div>
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
             <div className="flex flex-col bg-white border border-neutral-border rounded-md overflow-hidden shadow-sm h-full">
               <div className="px-4 py-3 border-b border-neutral-border bg-white flex justify-between items-center">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Algorithm Criteria</h3>
-                <button className="text-xs text-[#166534] font-bold hover:underline">Edit</button>
+                <button className="text-xs text-primary font-bold hover:underline">Edit</button>
               </div>
               <div className="p-4 flex flex-col gap-1 flex-1 overflow-y-auto">
                 <div className="mb-4">
@@ -186,9 +186,10 @@ export default function DashboardPage() {
               </div>
               {/* Map */}
               <div className="mt-auto border-t border-neutral-border">
-                <div className="bg-slate-200 h-36 w-full relative bg-cover bg-center grayscale hover:grayscale-0 transition-all duration-300 cursor-pointer group" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCNYdwaEYN4hF3iKT3tuDfghJa-iH4i_AxQP-auZnUVpJJvXp8wlvsaU95bavc5DNtsrIgCNtgLW_WQ9afdhDgeG4njF3guC1G6PZHxJDQ-EjxVLsXOXQLHtiF1euJ44ZDKW7NgplV94LCGWIGvcxdpHcI62mP1nNcaMZ36yXBvmtzKM1pJ_eJLXOuvPvkx33T1jIE6wvmjFBUz6lA2K81bmKTUx7ZBTznVJKs2CzhfihifxPDcyve1pngA4A7qwpg3UtZ4vQWX9Q')" }}>
+                <div className="relative h-36 w-full cursor-pointer overflow-hidden bg-slate-200 grayscale transition-all duration-300 hover:grayscale-0 group">
+                  <img src={MAP_PREVIEW_URL} alt="Map preview" className="absolute inset-0 size-full object-cover object-center" loading="lazy" />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                  <div className="absolute bottom-3 left-3 bg-white px-2 py-1 rounded border border-slate-300 text-[10px] font-mono shadow-sm group-hover:border-[#166534] group-hover:text-[#166534] transition-colors">Radius: 5km</div>
+                  <div className="absolute bottom-3 left-3 rounded border border-slate-300 bg-white px-2 py-1 text-[10px] font-mono shadow-sm transition-colors group-hover:border-primary group-hover:text-primary">Radius: 5km</div>
                 </div>
               </div>
             </div>

@@ -3,6 +3,10 @@
 > **File**: `backend/src/modules/matching/matching.service.ts`  
 > **Purpose**: Compute compatibility scores between users based on weighted lifestyle preferences
 
+External contract note:
+- The service still returns `Array<{ userId: string, score: number }>`.
+- Internal refactors (strategy seams, mappers, ranking helpers) do not change this output shape.
+
 ---
 
 ## 1. Algorithm Overview
@@ -16,6 +20,13 @@ Phase 2: COMPATIBILITY SCORING (weighted similarity — 0–100 score)
     ↓ (sorted by score descending)
 Output: Array<{ userId: string, score: number }>
 ```
+
+Current internal structure (post-refactor):
+- Mapping helpers: `mapToCandidateShape`, `mapToPreferenceShape`
+- Lookup helper: `buildPreferenceLookup`
+- Strategy seams: `EligibilityStrategy`, `ScoringStrategy`
+- Ranking helper: `rankEligibleCandidates`
+- Stable ordering helper: `sortRankedMatches`
 
 ---
 
@@ -159,6 +170,13 @@ The score is calculated **from User A's perspective** using User A's weights. Th
 Score(A → B) ≠ Score(B → A)   (unless both have identical weights)
 ```
 
+### Deterministic Tie-Order
+
+When two candidates receive the same score, ordering is deterministic:
+- Each candidate carries `insertionOrder` from the source candidate list.
+- `sortRankedMatches` sorts by score descending, then by `insertionOrder` ascending.
+- This preserves stable tie behavior while keeping score ranking unchanged.
+
 ### Weight Validation
 
 Weights are validated on save in `preferences.service.ts`:
@@ -195,11 +213,28 @@ export async function getDiscoveryFeed(userId: string) {
   // 3. Remove already-swiped users
   const filtered = matches.filter(m => !excludedUserIds.includes(m.userId));
 
-  // 4. Enrich each candidate with full profile + preference data + tags
+  // 4. Batch enrichment fetches (no per-candidate query fan-out)
+  const filteredUserIds = filtered.map(m => m.userId);
+  const [profiles, preferences] = await Promise.all([
+    prisma.profile.findMany({
+      where: { userId: { in: filteredUserIds } },
+      include: { user: true },
+    }),
+    prisma.preference.findMany({
+      where: { userId: { in: filteredUserIds } },
+    }),
+  ]);
+
+  const profileByUserId = new Map(profiles.map(p => [p.userId, p]));
+  const preferenceByUserId = new Map(preferences.map(p => [p.userId, p]));
+
+  // 5. Enrich candidates from in-memory maps
   const enrichedProfiles = await Promise.all(
     filtered.map(async (match) => {
-      const profile = await prisma.profile.findUnique({ ... });
-      const preference = await prisma.preference.findUnique({ ... });
+      const profile = profileByUserId.get(match.userId);
+      const preference = preferenceByUserId.get(match.userId) ?? null;
+      if (!profile) return null;
+
       return {
         id: match.userId,
         name: profile.user?.name || 'Anonymous',
@@ -213,6 +248,10 @@ export async function getDiscoveryFeed(userId: string) {
   return enrichedProfiles.filter(Boolean);
 }
 ```
+
+Pipeline contract note:
+- Discovery still returns the same enriched payload shape expected by existing clients.
+- The optimization is query-structure only (`findMany` batching + map joins), not response contract change.
 
 ---
 

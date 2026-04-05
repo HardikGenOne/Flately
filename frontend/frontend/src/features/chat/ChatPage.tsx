@@ -15,9 +15,10 @@ function ChatThread({ conversation, isActive, onClick }) {
   const hasUnread = conversation.unreadCount > 0
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className={`group relative flex items-center gap-3 p-3 px-4 cursor-pointer border-b border-slate-200 transition-colors ${
+      className={`group relative flex w-full items-center gap-3 border-b border-slate-200 p-3 px-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-inset ${
         isActive ? 'bg-mint border-l-[3px] border-l-[#166534]' : 'hover:bg-slate-50'
       }`}
     >
@@ -35,7 +36,7 @@ function ChatThread({ conversation, isActive, onClick }) {
         <p className={`text-xs truncate ${hasUnread ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>{conversation.lastMessage || 'Start a conversation'}</p>
       </div>
       {hasUnread && <div className="absolute right-3 top-1/2 mt-3 w-2 h-2 bg-[#166534] rounded-full" />}
-    </div>
+    </button>
   )
 }
 
@@ -65,12 +66,16 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState([])
   const [activeConvo, setActiveConvo] = useState(matchId || null)
   const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [refreshSeed, setRefreshSeed] = useState(0)
   const [otherUser, setOtherUser] = useState(null)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
     async function init() {
+      setIsLoading(true)
+      setErrorMessage('')
       try {
         const matches = await fetchMyMatches(getAccessTokenSilently)
         if (isMounted && matches) {
@@ -89,12 +94,18 @@ export default function ChatPage() {
           }
         }
         if (isMounted) setIsLoading(false)
-      } catch (error) { console.error('Failed to load chat:', error); if (isMounted) setIsLoading(false) }
+      } catch (error) {
+        console.error('Failed to load chat:', error)
+        if (isMounted) {
+          setErrorMessage('Unable to load conversations right now.')
+          setIsLoading(false)
+        }
+      }
     }
     init()
     const unsubscribe = onChatMessage((msg) => setMessages((prev) => [...prev, msg]))
     return () => { isMounted = false; unsubscribe() }
-  }, [activeConvo, getAccessTokenSilently])
+  }, [activeConvo, getAccessTokenSilently, refreshSeed])
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -110,32 +121,85 @@ export default function ChatPage() {
   const activeConversation = conversations.find(c => c.id === activeConvo) || conversations[0]
   const chatUser = otherUser || activeConversation?.user
 
-  if (isLoading) return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-10 h-10 border-3 border-slate-200 border-t-[#166534] rounded-full animate-spin" /></div>
+  if (isLoading) {
+    return (
+      <section className="flex flex-1 p-4 md:p-6" aria-busy="true" aria-live="polite">
+        <div className="flex min-h-[320px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <div className="flex flex-col items-center gap-3" role="status">
+            <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#166534]" />
+            <p className="text-xs font-mono text-slate-500">Loading conversations...</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <section className="flex flex-1 p-4 md:p-6">
+        <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-6 text-center shadow-sm" role="alert">
+          <p className="text-sm font-semibold text-amber-900">Could not load chat.</p>
+          <p className="text-xs text-amber-800">{errorMessage}</p>
+          <button
+            type="button"
+            onClick={() => setRefreshSeed((seed) => seed + 1)}
+            className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (!activeConversation) {
+    return (
+      <section className="flex flex-1 p-4 md:p-6">
+        <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">No conversations available.</p>
+          <p className="text-xs text-slate-500">Connect with a match to start messaging here.</p>
+        </div>
+      </section>
+    )
+  }
 
   return (
-    <div className="flex flex-1 overflow-hidden h-full">
+    <section className="flex h-full min-w-0 flex-1 p-4 md:p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm md:flex-row">
       {/* Left — Threads */}
-      <aside className="w-80 border-r border-slate-200 flex flex-col bg-white shrink-0">
+      <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white md:w-80 md:border-b-0 md:border-r">
         <div className="p-4 border-b border-slate-200 bg-white">
           <div className="relative mb-3">
             <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-9 pr-3 text-sm focus:ring-1 focus:ring-[#166534] focus:border-[#166534] placeholder:text-slate-400 font-medium" placeholder="Search threads..." type="text" />
+            <input
+              className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 py-2 pl-9 pr-3 text-sm text-slate-400 placeholder:text-slate-400 font-medium"
+              placeholder="Search coming soon"
+              type="text"
+              disabled
+              aria-label="Search threads coming soon"
+            />
           </div>
           <div className="flex gap-4">
-            <button className="text-xs font-bold text-slate-900 border-b-2 border-[#166534] pb-1">All</button>
-            <button className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors pb-1">Unread (2)</button>
-            <button className="text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors pb-1">Archived</button>
+            <span className="border-b-2 border-[#166534] pb-1 text-xs font-bold text-slate-900">All</span>
+            <button type="button" disabled aria-disabled="true" className="cursor-not-allowed pb-1 text-xs font-medium text-slate-400" title="Unread filter coming soon">Unread (2)</button>
+            <button type="button" disabled aria-disabled="true" className="cursor-not-allowed pb-1 text-xs font-medium text-slate-400" title="Archived filter coming soon">Archived</button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map((convo) => (
-            <ChatThread key={convo.id} conversation={convo} isActive={convo.id === activeConvo} onClick={() => setActiveConvo(convo.id)} />
-          ))}
+        <div className="max-h-[320px] flex-1 overflow-y-auto md:max-h-none">
+          {conversations.length === 0 ? (
+            <div className="flex h-full min-h-[120px] items-center justify-center px-4 py-6 text-center text-xs text-slate-500">
+              No threads yet.
+            </div>
+          ) : (
+            conversations.map((convo) => (
+              <ChatThread key={convo.id} conversation={convo} isActive={convo.id === activeConvo} onClick={() => setActiveConvo(convo.id)} />
+            ))
+          )}
         </div>
       </aside>
 
       {/* Center — Messages */}
-      <section className="flex-1 flex flex-col min-w-0 bg-mint relative">
+      <section className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-mint">
         <header className="h-14 flex items-center justify-between px-6 border-b border-slate-200 bg-white/95 backdrop-blur-sm sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
@@ -146,15 +210,15 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#166534] hover:border-[#166534] transition-colors">
+            <button type="button" disabled aria-disabled="true" className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400" title="Video call is not wired in this phase">
               <span className="material-symbols-outlined text-[18px]">videocam</span>
             </button>
-            <button className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#166534] hover:border-[#166534] transition-colors">
+            <button type="button" disabled aria-disabled="true" className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400" title="More actions are not wired in this phase">
               <span className="material-symbols-outlined text-[18px]">more_vert</span>
             </button>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5" role="log" aria-live="polite" aria-relevant="additions text">
           <div className="flex justify-center my-4">
             <span className="bg-white/50 border border-slate-200/60 text-slate-500 text-[10px] font-mono font-medium px-3 py-1 rounded-full uppercase tracking-wider">Today</span>
           </div>
@@ -163,18 +227,18 @@ export default function ChatPage() {
         </div>
         <div className="p-6 bg-white border-t border-slate-200">
           <div className="flex gap-3 items-end">
-            <button className="p-2.5 text-slate-400 hover:text-[#166534] transition-colors rounded-lg border border-transparent hover:bg-mint hover:border-slate-200 self-center">
+            <button type="button" disabled aria-disabled="true" className="self-center cursor-not-allowed rounded-lg border border-transparent p-2.5 text-slate-300" title="Attachments are not wired in this phase">
               <span className="material-symbols-outlined">add_circle</span>
             </button>
             <div className="flex-1 relative">
               <textarea
                 value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#166534] focus:border-[#166534] resize-none h-[48px] min-h-[48px] max-h-[120px] shadow-sm" placeholder="Type a message..." rows="1"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#166534] focus:border-[#166534] resize-none h-[48px] min-h-[48px] max-h-[120px] shadow-sm" placeholder="Type a message..." rows="1" aria-label="Message input"
               />
             </div>
             <button
               onClick={handleSend} disabled={!input.trim()}
-              className="bg-[#166534] hover:bg-[#14532d] text-white rounded-lg px-6 h-[48px] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-center"
+              className="bg-[#166534] hover:bg-[#14532d] text-white rounded-lg px-6 h-[48px] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#166534] focus-visible:ring-offset-1"
             >
               <span className="text-sm font-bold tracking-wide">Send</span>
             </button>
@@ -188,7 +252,9 @@ export default function ChatPage() {
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-slate-400">grid_view</span> Match Intel
           </h3>
-          <span className="material-symbols-outlined text-slate-400 text-[18px] cursor-pointer hover:text-[#166534]">info</span>
+          <button type="button" disabled aria-disabled="true" className="cursor-not-allowed text-slate-300" title="Info panel actions are not wired in this phase">
+            <span className="material-symbols-outlined text-[18px]">info</span>
+          </button>
         </div>
         <div className="p-5 flex flex-col gap-6">
           <div className="bg-mint rounded-lg p-4 border border-[#166534]/20 flex items-center justify-between">
@@ -222,18 +288,19 @@ export default function ChatPage() {
           </div>
           <div>
             <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">Private Notes</h4>
-            <textarea className="w-full text-xs bg-yellow-50 border border-yellow-200 text-slate-700 rounded-lg p-3 min-h-[80px] focus:outline-none focus:ring-1 focus:ring-yellow-400 placeholder:text-yellow-700/50 font-medium" placeholder="Add private notes..." />
+            <textarea className="w-full cursor-not-allowed text-xs bg-yellow-50 border border-yellow-200 text-slate-500 rounded-lg p-3 min-h-[80px] placeholder:text-yellow-700/50 font-medium" placeholder="Private notes coming soon..." disabled aria-label="Private notes coming soon" />
           </div>
           <div className="pt-2 mt-auto grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-600 transition-colors uppercase tracking-wide">
+            <button type="button" disabled aria-disabled="true" className="flex cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 py-2.5 px-4 text-xs font-bold uppercase tracking-wide text-slate-400" title="Report action coming soon">
               <span className="material-symbols-outlined text-[16px]">flag</span> Report
             </button>
-            <button className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-red-200 hover:bg-red-50 text-xs font-bold text-red-600 transition-colors uppercase tracking-wide">
+            <button type="button" disabled aria-disabled="true" className="flex cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-red-200 py-2.5 px-4 text-xs font-bold uppercase tracking-wide text-red-400" title="Unmatch action coming soon">
               <span className="material-symbols-outlined text-[16px]">block</span> Unmatch
             </button>
           </div>
         </div>
       </aside>
-    </div>
+      </div>
+    </section>
   )
 }

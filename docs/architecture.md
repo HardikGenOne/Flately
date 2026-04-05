@@ -116,11 +116,11 @@
 ### Auth0 Configuration
 
 ```typescript
-// Frontend — main.tsx
+// Frontend — main.tsx + config/runtimeConfig.ts
 Auth0Provider config:
-  domain:    "dev-aobtnrv6g50bmj1a.us.auth0.com"
-  clientId:  "2Pz3Q6dir2WRg5lDLW8ucrmo3HG92cOR"
-  audience:  "http://localhost:4000"
+  domain:    runtimeConfig.auth0Domain
+  clientId:  runtimeConfig.auth0ClientId
+  audience:  runtimeConfig.auth0Audience
   redirect:  window.location.origin
 
 // Backend — auth0.middleware.ts
@@ -151,7 +151,7 @@ Automatically syncs Auth0 user with backend on login:
 useEffect(() => {
   if (!isLoading && isAuthenticated && user) {
     dispatch(setAuth(user));
-    // POST /users/me — creates backend User record if not exists
+    // GET /users/me — creates backend User record if not exists
     apiRequest("/users/me", {}, getAccessTokenSilently);
   }
 }, [isAuthenticated, user, isLoading]);
@@ -169,7 +169,8 @@ backend/src/
 │   ├── env.ts                      # Zod-validated environment variables
 │   └── prisma.ts                   # PrismaClient singleton
 ├── middlewares/
-│   └── auth0.middleware.ts         # JWT validation + userId extraction
+│   ├── auth0.middleware.ts         # JWT validation + userId extraction
+│   └── controller-chain.middleware.ts  # Auth precondition + domain error mapping chain
 ├── modules/
 │   ├── users.controllers.ts        # GET /users/me
 │   ├── users.routes.ts             # Router for /users
@@ -177,15 +178,15 @@ backend/src/
 │   ├── profiles/
 │   │   ├── profiles.controller.ts  # GET/POST /profiles/me
 │   │   ├── profiles.routes.ts
-│   │   └── profiles.service.ts     # getProfileByUserId(), createOrUpdateProfile()
+│   │   └── profiles.service.ts     # getProfileByUserId(), ProfileUpsertService-based upsert
 │   ├── preferences/
 │   │   ├── preferences.controller.ts  # GET/POST /preferences/me
 │   │   ├── preferences.routes.ts
-│   │   └── preferences.service.ts     # Weight validation (sum=100)
+│   │   └── preferences.service.ts     # Weight validation + PreferenceUpsertService-based upsert
 │   ├── matching/
 │   │   ├── matching.controller.ts  # GET /matching/me
 │   │   ├── matching.routes.ts
-│   │   └── matching.service.ts     # Compatibility algorithm
+│   │   └── matching.service.ts     # Strategy seams + deterministic tie-order ranking
 │   ├── discovery/
 │   │   ├── discovery.controller.ts # GET /discovery/feed, POST /discovery/swipe
 │   │   ├── discovery.routes.ts
@@ -199,6 +200,8 @@ backend/src/
 │       ├── chat.routes.ts
 │       ├── chat.service.ts         # Conversation + message CRUD
 │       └── chat.socket.ts          # Socket.IO event handlers
+│   └── shared/
+│       └── upsert-by-user-id.service.ts  # Shared upsert lifecycle abstraction
 └── types/
     ├── api.ts                      # ApiResponse<T>, PaginatedResponse<T>
     ├── auth.ts                     # Auth0User, AuthRequest
@@ -213,6 +216,12 @@ Every backend module follows the **Controller → Service → Prisma** pattern:
 ```
 Route (auth middleware) → Controller (request/response) → Service (business logic) → Prisma (DB)
 ```
+
+Cross-cutting backend notes:
+- `withAuthenticatedController(...)` standardizes auth preconditions and error mapping for protected controllers.
+- `UpsertByUserIdService` removes duplicated create/update lifecycle branches in profile and preference services.
+- Matching internals expose strategy seams (`EligibilityStrategy`, `ScoringStrategy`) while preserving external output contract.
+- Tie scores are resolved deterministically by insertion order to keep stable ranking output.
 
 ---
 
@@ -269,6 +278,20 @@ AUTH0_DOMAIN=dev-aobtnrv6g50bmj1a.us.auth0.com
 AUTH0_AUDIENCE=http://localhost:4000
 FRONTEND_URL="http://localhost:5173"
 ```
+
+### Frontend runtime config (`frontend/frontend/.env.example`)
+
+```env
+VITE_API_BASE_URL=http://localhost:4000
+VITE_SOCKET_URL=http://localhost:4000
+VITE_AUTH0_DOMAIN=dev-aobtnrv6g50bmj1a.us.auth0.com
+VITE_AUTH0_CLIENT_ID=your-auth0-client-id
+VITE_AUTH0_AUDIENCE=http://localhost:4000
+```
+
+Runtime wiring notes:
+- Frontend transport and Auth0 values are read through `runtimeConfig`.
+- No frontend source edits are required per environment when these variables are set.
 
 ### Zod Validation
 
@@ -408,7 +431,7 @@ export const store = configureStore({
 ```typescript
 // services/api.ts
 const api = axios.create({
-  baseURL: 'http://localhost:4000',
+  baseURL: runtimeConfig.apiBaseUrl,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -442,13 +465,29 @@ const data = await apiRequest('/endpoint', { method: 'POST', data: body }, getAc
 ```typescript
 // chat.socket.ts
 io.on('connection', (socket) => {
-  socket.on('join', (conversationId) => socket.join(conversationId));
+  socket.on('joinRoom', (conversationId) => socket.join(conversationId));
+  socket.on('join', (conversationId) => socket.join(conversationId)); // alias
+  socket.on('sendMessage', async ({ conversationId, senderId, content }) => {
+    const msg = await sendMessage(conversationId, senderId, content);
+    const payload = {
+      id: msg.id, senderId: msg.senderId,
+      content: msg.content,
+      createdAt: msg.createdAt.toISOString(),
+      timestamp: msg.createdAt.toISOString(),
+    };
+    io.to(conversationId).emit('message', payload);
+    io.to(conversationId).emit('new_message', payload); // alias
+  });
   socket.on('send_message', async ({ conversationId, senderId, content }) => {
     const msg = await sendMessage(conversationId, senderId, content);
-    io.to(conversationId).emit('new_message', {
+    const payload = {
       id: msg.id, senderId: msg.senderId,
-      content: msg.content, timestamp: msg.createdAt
-    });
+      content: msg.content,
+      createdAt: msg.createdAt.toISOString(),
+      timestamp: msg.createdAt.toISOString(),
+    };
+    io.to(conversationId).emit('message', payload);
+    io.to(conversationId).emit('new_message', payload); // alias
   });
 });
 ```
@@ -457,21 +496,22 @@ io.on('connection', (socket) => {
 
 ```typescript
 // chat/socket.ts
-export const socket = io("http://localhost:4000");
+export const socket = io(runtimeConfig.socketUrl);
 
 // ChatPage.tsx
-socket.emit('join', conversationId);
-socket.emit('send_message', { conversationId, senderId, content });
-socket.on('new_message', (msg) => setMessages(prev => [...prev, msg]));
+socket.emit('joinRoom', conversationId);
+socket.emit('sendMessage', { conversationId, senderId, content });
+socket.on('message', (msg) => setMessages(prev => [...prev, msg]));
+socket.on('new_message', (msg) => setMessages(prev => [...prev, msg])); // alias
 ```
 
 ### Socket Event Contract
 
 | Direction | Event | Payload |
 |---|---|---|
-| Client → Server | `join` | `conversationId: string` |
-| Client → Server | `send_message` | `{ conversationId, senderId, content }` |
-| Server → Client | `new_message` | `{ id, senderId, content, timestamp }` |
+| Client → Server | `joinRoom` (canonical), `join` (alias) | `conversationId: string` |
+| Client → Server | `sendMessage` (canonical), `send_message` (alias) | `{ conversationId, senderId, content }` |
+| Server → Client | `message` (canonical), `new_message` (alias) | `{ id, senderId, content, createdAt, timestamp }` |
 
 ---
 
