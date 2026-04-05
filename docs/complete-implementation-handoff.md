@@ -230,6 +230,7 @@ Direct API probes with fresh user sessions:
 ## 12. Source-of-Truth Documents
 
 - Product flow: `docs/product-user-flow.md`
+- Frontend implementation: `docs/frontend-guide.md`
 - API contract: `docs/api-reference.md`
 - Runtime verification evidence: `docs/manual-auth-end-to-end-verification.md`
 - Rebuild status log: `docs/frontend-rebuild-status-2026-04-05.md`
