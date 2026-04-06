@@ -1,11 +1,14 @@
-import { type ChangeEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { setProfile } from '@/features/profile/profileSlice'
 import {
+  ProfilePhotoManager,
+  type CloudinaryStatusState,
+} from '@/features/profile/ProfilePhotoManager'
+import {
   getCloudinaryUploadAvailability,
   uploadImageToCloudinary,
-  type CloudinaryUploadAvailability,
 } from '@/services/cloudinary'
 import { toApiErrorMessage } from '@/services/api'
 import { getMyPreferences, saveMyPreferences } from '@/services/preferences.transport'
@@ -23,24 +26,6 @@ import {
   type PreAuthQuestionnaireDraft,
 } from '@/features/preauth/preauth.storage'
 import type { OnboardingFormData, Preference, Profile } from '@/types'
-
-type CloudinaryStatusState = CloudinaryUploadAvailability | 'checking'
-
-function getCloudinaryStatusLabel(status: CloudinaryStatusState): string {
-  if (status === 'checking') {
-    return 'checking...'
-  }
-
-  if (status === 'signed') {
-    return 'signed backend available'
-  }
-
-  if (status === 'unsigned') {
-    return 'unsigned preset fallback'
-  }
-
-  return 'unavailable'
-}
 
 function hasProfileCity(profile: Profile | null): boolean {
   return Boolean(profile?.city && profile.city.trim().length > 0)
@@ -93,7 +78,6 @@ export function OnboardingPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [manualPhotoUrl, setManualPhotoUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [cloudinaryStatus, setCloudinaryStatus] = useState<CloudinaryStatusState>('checking')
 
@@ -118,7 +102,17 @@ export function OnboardingPage() {
 
         const mapped = mapInitialFormData(profile, preference, authUser?.name || '')
         const draft = readPreAuthQuestionnaireDraft()
-        setFormData(applyDraftToFormData(mapped, draft, profile, preference))
+        const merged = applyDraftToFormData(mapped, draft, profile, preference)
+
+        if (merged.photos.length === 0 && authUser?.picture) {
+          setFormData({
+            ...merged,
+            photos: [authUser.picture],
+          })
+          return
+        }
+
+        setFormData(merged)
       } catch (loadError) {
         if (!cancelled) {
           setError(toApiErrorMessage(loadError, 'Failed to load onboarding data'))
@@ -135,7 +129,7 @@ export function OnboardingPage() {
     return () => {
       cancelled = true
     }
-  }, [authUser?.name, navigate])
+  }, [authUser?.name, authUser?.picture, navigate])
 
   useEffect(() => {
     let cancelled = false
@@ -188,25 +182,19 @@ export function OnboardingPage() {
     })
   }
 
-  async function onUploadImage(event: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
-
+  async function onUploadImage(file: File): Promise<void> {
     setError(null)
     setUploading(true)
     try {
       const uploadedUrl = await uploadImageToCloudinary(file)
       setFormData((prev) => ({
         ...prev,
-        photos: [...prev.photos, uploadedUrl],
+        photos: prev.photos.includes(uploadedUrl) ? prev.photos : [...prev.photos, uploadedUrl],
       }))
     } catch (uploadError) {
       setError(toApiErrorMessage(uploadError, 'Image upload failed'))
     } finally {
       setUploading(false)
-      event.target.value = ''
     }
   }
 
@@ -217,35 +205,21 @@ export function OnboardingPage() {
     }))
   }
 
-  function addPhotoFromUrl(): void {
-    const candidate = manualPhotoUrl.trim()
-
-    if (!candidate) {
-      return
-    }
-
-    try {
-      const parsedUrl = new URL(candidate)
-      if (!/^https?:$/.test(parsedUrl.protocol)) {
-        throw new Error('INVALID_PROTOCOL')
+  function setPrimaryPhoto(index: number): void {
+    setFormData((prev) => {
+      if (index <= 0 || index >= prev.photos.length) {
+        return prev
       }
 
-      setFormData((prev) => {
-        if (prev.photos.includes(parsedUrl.toString())) {
-          return prev
-        }
+      const nextPhotos = [...prev.photos]
+      const [primaryPhoto] = nextPhotos.splice(index, 1)
+      nextPhotos.unshift(primaryPhoto)
 
-        return {
-          ...prev,
-          photos: [...prev.photos, parsedUrl.toString()],
-        }
-      })
-
-      setManualPhotoUrl('')
-      setError(null)
-    } catch {
-      setError('Photo URL must be a valid http(s) address.')
-    }
+      return {
+        ...prev,
+        photos: nextPhotos,
+      }
+    })
   }
 
   function validateCurrentStep(): string | null {
@@ -255,6 +229,9 @@ export function OnboardingPage() {
       }
       if (!Number.isFinite(formData.age) || formData.age < 18 || formData.age > 99) {
         return 'Age must be between 18 and 99.'
+      }
+      if (formData.photos.length === 0) {
+        return 'Add at least one profile photo before continuing.'
       }
     }
 
@@ -427,63 +404,19 @@ export function OnboardingPage() {
             </label>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-700">Photos</p>
-                <p className="text-xs text-slate-500" data-testid="cloudinary-status-badge">
-                  Cloudinary: {getCloudinaryStatusLabel(cloudinaryStatus)}
-                </p>
-              </div>
-
-              {cloudinaryStatus === 'unavailable' ? (
-                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Cloudinary uploads are unavailable right now. You can still continue by adding
-                  photo URLs manually below.
-                </p>
-              ) : null}
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={onUploadImage}
-                disabled={uploading}
-                aria-label="Upload profile photo"
-                title="Upload profile photo"
-                className="block w-full text-sm text-slate-600"
+              <ProfilePhotoManager
+                photos={formData.photos}
+                cloudinaryStatus={cloudinaryStatus}
+                uploading={uploading}
+                onUploadFile={onUploadImage}
+                onRemovePhoto={removePhoto}
+                onSetPrimary={setPrimaryPhoto}
+                statusTestId="cloudinary-status-badge"
+                uploadButtonLabel="Choose photo"
+                helperText="At least one photo is required. Your first photo is shown as primary."
+                unavailableMessage="Cloudinary uploads are unavailable right now. Please try again before continuing."
+                emptyStateLabel="Add at least one photo to continue onboarding."
               />
-
-              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <input
-                  type="url"
-                  value={manualPhotoUrl}
-                  onChange={(event) => setManualPhotoUrl(event.target.value)}
-                  className="w-full rounded-md border border-neutral-border px-3 py-2 text-sm"
-                  placeholder="https://example.com/photo.jpg"
-                />
-                <button
-                  type="button"
-                  onClick={addPhotoFromUrl}
-                  className="rounded-md border border-neutral-border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Add URL
-                </button>
-              </div>
-
-              {uploading ? <p className="text-sm text-slate-500">Uploading image...</p> : null}
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {formData.photos.map((photo) => (
-                  <div key={photo} className="overflow-hidden rounded-md border border-neutral-border">
-                    <img src={photo} alt="Uploaded profile" className="h-32 w-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(photo)}
-                      className="w-full border-t border-neutral-border px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         ) : null}

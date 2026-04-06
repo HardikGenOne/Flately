@@ -98,7 +98,7 @@ test.describe('Onboarding Cloudinary Signed Upload', () => {
     )
 
     const chooserPromise = page.waitForEvent('filechooser')
-    await page.getByLabel('Upload profile photo').click()
+    await page.getByRole('button', { name: 'Choose photo' }).click()
     const chooser = await chooserPromise
 
     await chooser.setFiles({

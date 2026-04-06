@@ -28,6 +28,7 @@ const WEIGHT_LABELS: Array<{ label: string; key: keyof Pick<Preference, 'weightC
 
 export function DashboardPage() {
   const profile = useAppSelector((state) => state.profile.data)
+  const primaryPhoto = profile?.photos[0] || null
 
   const [reloadToken, setReloadToken] = useState(0)
   const [matches, setMatches] = useState<Match[]>([])
@@ -253,7 +254,30 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-4">
+        <section className="rounded-lg border border-neutral-border bg-surface p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Your profile image</p>
+
+          {primaryPhoto ? (
+            <img
+              src={primaryPhoto}
+              alt="Your primary profile"
+              className="mt-3 h-52 w-full rounded-md border border-neutral-border object-cover"
+            />
+          ) : (
+            <div className="mt-3 flex h-52 items-center justify-center rounded-md border border-dashed border-neutral-border bg-canvas px-4 text-center text-sm text-slate-600">
+              No profile photo yet. Add one so your card is recognizable in discovery and matches.
+            </div>
+          )}
+
+          <Link
+            to="/app/profile"
+            className="mt-4 inline-block rounded border border-neutral-border px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {primaryPhoto ? 'Change profile photo' : 'Add profile photo'}
+          </Link>
+        </section>
+
         <section className="rounded-lg border border-neutral-border bg-surface p-5">
           <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Completion blockers</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">{profileCompletion}%</p>

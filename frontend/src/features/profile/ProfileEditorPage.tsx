@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppDispatch } from '@/app/hooks'
+import {
+  ProfilePhotoManager,
+  type CloudinaryStatusState,
+} from '@/features/profile/ProfilePhotoManager'
 import { setProfile } from '@/features/profile/profileSlice'
+import {
+  getCloudinaryUploadAvailability,
+  uploadImageToCloudinary,
+} from '@/services/cloudinary'
 import { toApiErrorMessage } from '@/services/api'
 import { getMyPreferences, saveMyPreferences } from '@/services/preferences.transport'
 import { getMyProfile, saveMyProfile } from '@/services/profile.transport'
@@ -13,6 +21,7 @@ type ProfileFormState = {
   gender: 'male' | 'female' | 'other' | 'prefer-not-to-say'
   bio: string
   occupation: 'student' | 'professional'
+  photos: string[]
   city: string
   hasRoom: boolean
   sleepSchedule: 'early-bird' | 'night-owl' | 'flexible'
@@ -46,6 +55,7 @@ function getDefaultProfileForm(): ProfileFormState {
     gender: 'prefer-not-to-say',
     bio: '',
     occupation: 'professional',
+    photos: [],
     city: '',
     hasRoom: false,
     sleepSchedule: 'flexible',
@@ -79,14 +89,39 @@ export function ProfileEditorPage() {
   const dispatch = useAppDispatch()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [cloudinaryStatus, setCloudinaryStatus] = useState<CloudinaryStatusState>('checking')
   const [profileForm, setProfileForm] = useState<ProfileFormState>(getDefaultProfileForm())
   const [preferenceForm, setPreferenceForm] = useState<PreferenceFormState>(
     getDefaultPreferenceForm(),
   )
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCloudinaryStatus(): Promise<void> {
+      try {
+        const status = await getCloudinaryUploadAvailability()
+        if (!cancelled) {
+          setCloudinaryStatus(status)
+        }
+      } catch {
+        if (!cancelled) {
+          setCloudinaryStatus('unavailable')
+        }
+      }
+    }
+
+    loadCloudinaryStatus()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -112,6 +147,7 @@ export function ProfileEditorPage() {
               gender: profile.gender || 'prefer-not-to-say',
               bio: profile.bio || '',
               occupation: profile.occupation || 'professional',
+              photos: profile.photos || [],
               city: profile.city || '',
               hasRoom: profile.hasRoom,
               sleepSchedule: profile.sleepSchedule || 'flexible',
@@ -175,6 +211,50 @@ export function ProfileEditorPage() {
     [preferenceForm],
   )
 
+  async function onUploadPhoto(file: File): Promise<void> {
+    setError(null)
+    setNotice(null)
+    setUploading(true)
+
+    try {
+      const uploadedUrl = await uploadImageToCloudinary(file)
+      setProfileForm((prev) => ({
+        ...prev,
+        photos: prev.photos.includes(uploadedUrl) ? prev.photos : [...prev.photos, uploadedUrl],
+      }))
+    } catch (uploadError) {
+      setError(toApiErrorMessage(uploadError, 'Image upload failed'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removePhoto(url: string): void {
+    setNotice(null)
+    setProfileForm((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((photo) => photo !== url),
+    }))
+  }
+
+  function setPrimaryPhoto(index: number): void {
+    setNotice(null)
+    setProfileForm((prev) => {
+      if (index <= 0 || index >= prev.photos.length) {
+        return prev
+      }
+
+      const nextPhotos = [...prev.photos]
+      const [primaryPhoto] = nextPhotos.splice(index, 1)
+      nextPhotos.unshift(primaryPhoto)
+
+      return {
+        ...prev,
+        photos: nextPhotos,
+      }
+    })
+  }
+
   async function saveCurrentTab(): Promise<void> {
     setSaving(true)
     setError(null)
@@ -198,6 +278,7 @@ export function ProfileEditorPage() {
           gender: profileForm.gender,
           bio: profileForm.bio.trim(),
           occupation: profileForm.occupation,
+          photos: profileForm.photos,
           city: profileForm.city.trim(),
           hasRoom: profileForm.hasRoom,
           sleepSchedule: profileForm.sleepSchedule,
@@ -305,6 +386,20 @@ export function ProfileEditorPage() {
 
       {activeTab === 'profile' ? (
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <ProfilePhotoManager
+              photos={profileForm.photos}
+              cloudinaryStatus={cloudinaryStatus}
+              uploading={uploading}
+              onUploadFile={onUploadPhoto}
+              onRemovePhoto={removePhoto}
+              onSetPrimary={setPrimaryPhoto}
+              statusTestId="profile-cloudinary-status-badge"
+              uploadButtonLabel="Choose photo"
+              emptyStateLabel="No photos yet. Add one so others can recognize you."
+            />
+          </div>
+
           <label className="text-sm">
             <span className="font-medium text-slate-700">Name</span>
             <input
@@ -693,7 +788,7 @@ export function ProfileEditorPage() {
           onClick={() => {
             void saveCurrentTab()
           }}
-          disabled={saving}
+          disabled={saving || uploading}
           className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? 'Saving...' : activeTab === 'profile' ? 'Save profile' : 'Save preferences'}
