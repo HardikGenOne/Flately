@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { ROUTES } from '@/app/routes'
 import { setProfile } from '@/features/profile/profileSlice'
 import {
   ProfilePhotoManager,
@@ -96,7 +97,7 @@ export function OnboardingPage() {
         }
 
         if (profile?.onboardingCompleted) {
-          navigate('/app', { replace: true })
+          navigate(ROUTES.appRoot, { replace: true })
           return
         }
 
@@ -295,7 +296,7 @@ export function OnboardingPage() {
       await saveMyPreferences(preferencePayload)
       clearPreAuthQuestionnaireDraft()
       dispatch(setProfile(savedProfile))
-      navigate('/app', { replace: true })
+      navigate(ROUTES.appRoot, { replace: true })
     } catch (submitError) {
       setError(toApiErrorMessage(submitError, 'Failed to finish onboarding'))
     } finally {

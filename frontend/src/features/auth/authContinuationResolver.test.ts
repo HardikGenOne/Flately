@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ROUTES } from '@/app/routes'
 import { resolveAuthContinuationPath } from '@/features/auth/authContinuationResolver'
 
 describe('resolveAuthContinuationPath', () => {
@@ -8,7 +9,7 @@ describe('resolveAuthContinuationPath', () => {
       source: 'questionnaire',
     })
 
-    expect(path).toBe('/app/onboarding')
+    expect(path).toBe(ROUTES.appOnboarding)
   })
 
   it('routes questionnaire source to onboarding for login', () => {
@@ -17,7 +18,7 @@ describe('resolveAuthContinuationPath', () => {
       source: 'questionnaire',
     })
 
-    expect(path).toBe('/app/onboarding')
+    expect(path).toBe(ROUTES.appOnboarding)
   })
 
   it('routes questionnaire source to onboarding for google callback', () => {
@@ -26,7 +27,7 @@ describe('resolveAuthContinuationPath', () => {
       source: 'questionnaire',
     })
 
-    expect(path).toBe('/app/onboarding')
+    expect(path).toBe(ROUTES.appOnboarding)
   })
 
   it('routes signup without questionnaire source to onboarding', () => {
@@ -35,7 +36,7 @@ describe('resolveAuthContinuationPath', () => {
       source: null,
     })
 
-    expect(path).toBe('/app/onboarding')
+    expect(path).toBe(ROUTES.appOnboarding)
   })
 
   it('routes login without questionnaire source to app', () => {
@@ -44,7 +45,7 @@ describe('resolveAuthContinuationPath', () => {
       source: null,
     })
 
-    expect(path).toBe('/app')
+    expect(path).toBe(ROUTES.appRoot)
   })
 
   it('routes google callback without questionnaire source to app', () => {
@@ -53,7 +54,7 @@ describe('resolveAuthContinuationPath', () => {
       source: null,
     })
 
-    expect(path).toBe('/app')
+    expect(path).toBe(ROUTES.appRoot)
   })
 
   it('normalizes source casing and whitespace', () => {
@@ -62,6 +63,6 @@ describe('resolveAuthContinuationPath', () => {
       source: '  QuEsTiOnNaIrE  ',
     })
 
-    expect(path).toBe('/app/onboarding')
+    expect(path).toBe(ROUTES.appOnboarding)
   })
 })

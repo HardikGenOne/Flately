@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import { buildAppChatPath } from '@/app/routes'
 import { mergeIncomingMessage } from '@/features/chat/chat.messages'
 import { getChatSocket } from '@/features/chat/chat.socket'
 import { toApiErrorMessage } from '@/services/api'
@@ -62,7 +63,7 @@ export function ChatPage() {
           const firstMatchId = nextMatches[0]?.id || null
           setActiveMatchId(firstMatchId)
           if (!params.matchId && firstMatchId) {
-            navigate(`/app/chat/${firstMatchId}`, { replace: true })
+            navigate(buildAppChatPath(firstMatchId), { replace: true })
           }
         }
       } catch (loadError) {
@@ -273,7 +274,7 @@ export function ChatPage() {
                 type="button"
                 onClick={() => {
                   setActiveMatchId(match.id)
-                  navigate(`/app/chat/${match.id}`)
+                  navigate(buildAppChatPath(match.id))
                 }}
                 className={[
                   'w-full rounded-md border px-3 py-2 text-left',

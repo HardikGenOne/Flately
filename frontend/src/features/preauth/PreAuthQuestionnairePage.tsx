@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DEFAULT_FORM_DATA, PRIORITY_LABELS } from '@/features/onboarding/onboarding.mapper'
+import { AUTH_SOURCE, ROUTES, buildPathWithQuery } from '@/app/routes'
 import {
   savePreAuthQuestionnaireDraft,
   type PreAuthQuestionnaireDraft,
@@ -96,7 +97,7 @@ export function PreAuthQuestionnairePage() {
     setStep((prev) => Math.max(prev - 1, 1))
   }
 
-  function handoff(path: '/signup' | '/login'): void {
+  function handoff(path: typeof ROUTES.signup | typeof ROUTES.login): void {
     const validationError = validateCurrentStep()
     if (validationError) {
       setError(validationError)
@@ -106,7 +107,7 @@ export function PreAuthQuestionnairePage() {
     savePreAuthQuestionnaireDraft(draft)
     navigate({
       pathname: path,
-      search: '?source=questionnaire',
+      search: buildPathWithQuery('', { source: AUTH_SOURCE.questionnaire }),
     })
   }
 
@@ -317,14 +318,14 @@ export function PreAuthQuestionnairePage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => handoff('/signup')}
+                  onClick={() => handoff(ROUTES.signup)}
                   className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
                 >
                   Continue to sign up
                 </button>
                 <button
                   type="button"
-                  onClick={() => handoff('/login')}
+                  onClick={() => handoff(ROUTES.login)}
                   className="rounded-xl border border-neutral-border bg-surface px-4 py-2 text-sm font-semibold text-slate-700"
                 >
                   I already have an account
@@ -336,7 +337,7 @@ export function PreAuthQuestionnairePage() {
       </div>
 
       <p className="mt-4 text-center text-sm text-slate-500">
-        Want to skip this for now? <Link to="/signup" className="font-semibold text-primary">Go straight to account creation.</Link>
+        Want to skip this for now? <Link to={ROUTES.signup} className="font-semibold text-primary">Go straight to account creation.</Link>
       </p>
     </section>
   )

@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import { ROUTES } from '@/app/routes'
 
 type ProtectedRouteProps = PropsWithChildren<{
   allowIncompleteProfile?: boolean
@@ -18,7 +19,7 @@ export function ProtectedRoute({ children, allowIncompleteProfile = false }: Pro
   }
 
   if (authStatus !== 'authenticated') {
-    return <Navigate to="/login" replace />
+    return <Navigate to={ROUTES.login} replace />
   }
 
   if (allowIncompleteProfile) {
@@ -46,7 +47,7 @@ export function ProtectedRoute({ children, allowIncompleteProfile = false }: Pro
   }
 
   if (!profile || !profile.onboardingCompleted) {
-    return <Navigate to="/app/onboarding" replace />
+    return <Navigate to={ROUTES.appOnboarding} replace />
   }
 
   return children

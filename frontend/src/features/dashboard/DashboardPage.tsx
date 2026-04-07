@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import { ROUTES, buildAppChatPath } from '@/app/routes'
 import { toApiErrorMessage } from '@/services/api'
 import { getDiscoveryFeed } from '@/services/discovery.transport'
 import { getMyMatches } from '@/services/matches.transport'
@@ -16,7 +17,7 @@ type NextAction = {
   title: string
   description: string
   cta: string
-  to: string
+  to: keyof Pick<typeof ROUTES, 'appOnboarding' | 'appProfile' | 'appDiscover' | 'appMatches'>
 }
 
 const WEIGHT_LABELS: Array<{ label: string; key: keyof Pick<Preference, 'weightCleanliness' | 'weightSleep' | 'weightHabits' | 'weightSocial'> }> = [
@@ -189,7 +190,7 @@ export function DashboardPage() {
         title: 'Finish profile prerequisites',
         description: 'Resolve blockers first so matching and chat routes stay reliable.',
         cta: 'Go to onboarding',
-        to: '/app/onboarding',
+        to: 'appOnboarding',
       }
     }
 
@@ -198,7 +199,7 @@ export function DashboardPage() {
         title: 'Refine your matching criteria',
         description: 'Adjust preferences to increase eligible candidates in your discovery feed.',
         cta: 'Update profile and preferences',
-        to: '/app/profile',
+        to: 'appProfile',
       }
     }
 
@@ -207,7 +208,7 @@ export function DashboardPage() {
         title: 'Start your discovery sprint',
         description: 'Review candidates and send your first like to unlock match conversations.',
         cta: 'Open discovery',
-        to: '/app/discover',
+        to: 'appDiscover',
       }
     }
 
@@ -215,7 +216,7 @@ export function DashboardPage() {
       title: 'Move active matches into conversation',
       description: 'Prioritize your top match and send the first message while intent is high.',
       cta: 'Open matches',
-      to: '/app/matches',
+      to: 'appMatches',
     }
   }, [completionBlockers.length, discoveryCount, matches.length])
 
@@ -271,7 +272,7 @@ export function DashboardPage() {
           )}
 
           <Link
-            to="/app/profile"
+            to={ROUTES.appProfile}
             className="mt-4 inline-block rounded border border-neutral-border px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
             {primaryPhoto ? 'Change profile photo' : 'Add profile photo'}
@@ -296,7 +297,7 @@ export function DashboardPage() {
           )}
 
           <Link
-            to="/app/onboarding"
+            to={ROUTES.appOnboarding}
             className="mt-4 inline-block rounded border border-neutral-border px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
             Review onboarding answers
@@ -324,7 +325,7 @@ export function DashboardPage() {
               {matches.slice(0, 3).map((match) => (
                 <Link
                   key={match.id}
-                  to={`/app/chat/${match.id}`}
+                  to={buildAppChatPath(match.id)}
                   className="block rounded border border-neutral-border px-3 py-2 text-sm hover:bg-slate-50"
                 >
                   <p className="font-medium text-slate-800">{match.otherUser.name}</p>
@@ -345,7 +346,7 @@ export function DashboardPage() {
           <p className="mt-2 text-sm text-slate-600">{nextAction.description}</p>
 
           <Link
-            to={nextAction.to}
+            to={ROUTES[nextAction.to]}
             className="mt-4 inline-block rounded bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary-dark"
           >
             {nextAction.cta}

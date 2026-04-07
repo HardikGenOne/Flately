@@ -27,6 +27,7 @@ import {
   readPersistedSession,
 } from '@/features/auth/auth.storage'
 import { formatAuthError } from '@/features/auth/auth.error'
+import { AUTH_REASON, ROUTES, buildPathWithQuery } from '@/app/routes'
 
 type AuthContextValue = {
   isAuthenticated: boolean
@@ -58,8 +59,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearPersistedSession()
       dispatch(clearSession())
 
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login?reason=session-expired')
+      if (window.location.pathname !== ROUTES.login) {
+        window.location.assign(
+          buildPathWithQuery(ROUTES.login, {
+            reason: AUTH_REASON.sessionExpired,
+          }),
+        )
       }
     })
 

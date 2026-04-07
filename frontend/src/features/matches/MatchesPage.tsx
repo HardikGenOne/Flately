@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { buildAppChatPath } from '@/app/routes'
 import { toApiErrorMessage } from '@/services/api'
 import { getMyMatches } from '@/services/matches.transport'
 import type { Match } from '@/types'
@@ -94,7 +95,7 @@ export function MatchesPage() {
                 <tr
                   key={match.id}
                   className="cursor-pointer border-b border-neutral-border hover:bg-slate-50"
-                  onClick={() => navigate(`/app/chat/${match.id}`)}
+                  onClick={() => navigate(buildAppChatPath(match.id))}
                 >
                   <td className="px-2 py-3">
                     <div className="flex items-center gap-3">
@@ -125,7 +126,7 @@ export function MatchesPage() {
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation()
-                        navigate(`/app/chat/${match.id}`)
+                        navigate(buildAppChatPath(match.id))
                       }}
                       className="rounded-md border border-neutral-border px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                     >

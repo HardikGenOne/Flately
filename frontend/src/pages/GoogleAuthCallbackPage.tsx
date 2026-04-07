@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { resolveAuthContinuationPath } from '@/features/auth/authContinuationResolver'
 import { formatAuthError, formatAuthErrorCode } from '@/features/auth/auth.error'
+import { ROUTES } from '@/app/routes'
 
 export function GoogleAuthCallbackPage() {
   const navigate = useNavigate()
@@ -86,7 +87,7 @@ export function GoogleAuthCallbackPage() {
         )}
 
         <div className="mt-5">
-          <Link to="/login" className="text-sm font-semibold text-primary hover:text-primary-dark">
+          <Link to={ROUTES.login} className="text-sm font-semibold text-primary hover:text-primary-dark">
             Back to login
           </Link>
         </div>

@@ -1,16 +1,19 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { ROUTES, SIDEBAR_NAV_ITEMS, type SidebarNavItem } from '@/app/routes'
 
-const navItems = [
-  { label: 'Dashboard', path: '/app' },
-  { label: 'Discovery', path: '/app/discover' },
-  { label: 'Matches', path: '/app/matches' },
-  { label: 'Chat', path: '/app/chat' },
-  { label: 'Profile', path: '/app/profile' },
-]
+function isActivePath(currentPathname: string, targetPath: SidebarNavItem['path']): boolean {
+  if (targetPath === ROUTES.appRoot) {
+    return currentPathname === ROUTES.appRoot
+  }
+
+  return currentPathname === targetPath || currentPathname.startsWith(`${targetPath}/`)
+}
 
 export function AppLayout() {
   const { signOut } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   return (
     <div className="flex min-h-screen bg-canvas text-slate-900">
@@ -20,23 +23,30 @@ export function AppLayout() {
           <h1 className="text-lg font-semibold">Command Center</h1>
         </div>
         <nav className="flex flex-1 flex-col gap-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/app'}
-              className={({ isActive }) =>
-                [
-                  'rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+          {SIDEBAR_NAV_ITEMS.map((item) => {
+            const isActive = isActivePath(location.pathname, item.path)
+
+            return (
+              <button
+                type="button"
+                key={item.path}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  if (!isActive) {
+                    navigate(item.path)
+                  }
+                }}
+                className={[
+                  'rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors',
                   isActive
                     ? 'border-emerald-100 bg-mint text-primary'
                     : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900',
-                ].join(' ')
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            )
+          })}
         </nav>
         <button
           type="button"

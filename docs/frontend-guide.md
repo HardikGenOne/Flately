@@ -151,6 +151,64 @@ Protected routes:
 Catch-all:
 - * -> /
 
+### Sidebar navigation pattern (applied)
+
+Files:
+- src/app/routes.ts
+- src/app/AppLayout.tsx
+
+Pattern used:
+- Single Source of Truth + Command-style navigation
+
+Why it was applied:
+- The app uses React Router, so sidebar interactions should always stay in SPA navigation.
+- Link-style rendering can still behave like browser navigation under some user interactions and environments.
+
+How it works now:
+1. All app route paths and sidebar targets are defined centrally in `src/app/routes.ts`.
+2. Sidebar items are rendered from configuration (`SIDEBAR_NAV_ITEMS`) rather than hardcoded strings.
+3. Sidebar clicks execute `navigate(path)` commands from React Router instead of relying on anchor navigation semantics.
+4. Active-state logic is route-aware (`/app` exact match, nested routes by prefix) to keep highlighting consistent.
+
+Result:
+- Sidebar route changes remain in-app and predictable.
+- Route drift risk is reduced because router and navigation pull from the same route registry.
+
+### Centralized routing system (applied across feature pages)
+
+Files:
+- src/app/routes.ts
+- src/app/router.tsx
+- src/app/AppLayout.tsx
+- src/app/ProtectedRoute.tsx
+- src/pages/LandingPage.tsx
+- src/pages/LoginPage.tsx
+- src/pages/SignupPage.tsx
+- src/pages/GoogleAuthCallbackPage.tsx
+- src/features/preauth/PreAuthQuestionnairePage.tsx
+- src/features/onboarding/OnboardingPage.tsx
+- src/features/dashboard/DashboardPage.tsx
+- src/features/matches/MatchesPage.tsx
+- src/features/chat/ChatPage.tsx
+- src/features/auth/AuthProvider.tsx
+- src/features/auth/authContinuationResolver.ts
+
+What is centralized:
+1. Static paths are stored in ROUTES.
+2. Child route segments are stored in APP_CHILD_ROUTE_SEGMENTS.
+3. Sidebar destinations are stored in SIDEBAR_NAV_ITEMS.
+4. Dynamic routes use builders (example: buildAppChatPath(matchId)).
+5. Query-string navigation uses a shared helper (buildPathWithQuery).
+
+Operational rule:
+- UI code must not hardcode app path strings directly.
+- New navigation should reference route constants/builders from src/app/routes.ts.
+
+Benefits observed:
+- In-app navigation behavior is consistent across sidebar, page CTAs, redirects, and auth continuation.
+- Refactors become safer because path changes happen in one place.
+- Tests can assert against route constants instead of duplicated literals.
+
 ### Guard behavior
 
 File: src/app/ProtectedRoute.tsx
@@ -211,6 +269,22 @@ Design pattern applied:
   - `QuestionnaireSourceStrategy`
   - `SignupDefaultStrategy`
   - `DefaultAppStrategy`
+
+Related routing design patterns used in the app:
+1. Registry pattern
+  - Route definitions are centralized in src/app/routes.ts and shared by router and UI consumers.
+2. Command pattern
+  - Sidebar actions issue navigate(path) commands instead of relying on anchor-link behavior.
+3. Strategy pattern
+  - Auth continuation destination is resolved by ordered strategies in authContinuationResolver.
+
+How to apply these patterns for any new route feature:
+1. Add the new route constant (and segment if needed) in src/app/routes.ts.
+2. Add dynamic path builder functions if the route requires params.
+3. Wire router.tsx to consume those constants/segments only.
+4. Replace all Link/Navigate/navigate call sites to use constants/builders.
+5. Add or update tests to assert constants from routes.ts rather than string literals.
+6. Update this guide section when introducing a new navigation policy.
 
 ## 8. Pre-Auth Questionnaire Handoff
 

@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { resolveAuthContinuationPath } from '@/features/auth/authContinuationResolver'
 import { formatAuthError, formatAuthErrorCode } from '@/features/auth/auth.error'
+import { ROUTES } from '@/app/routes'
 
 export function SignupPage() {
   const navigate = useNavigate()
@@ -17,7 +18,7 @@ export function SignupPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/app', { replace: true })
+      navigate(ROUTES.appRoot, { replace: true })
     }
   }, [isAuthenticated, navigate])
 
@@ -147,7 +148,7 @@ export function SignupPage() {
 
           <p className="mt-5 text-sm text-slate-600">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-primary hover:text-primary-dark">
+            <Link to={ROUTES.login} className="font-semibold text-primary hover:text-primary-dark">
               Sign in
             </Link>
           </p>
@@ -155,7 +156,7 @@ export function SignupPage() {
           {source === 'questionnaire' ? (
             <p className="mt-2 text-sm text-slate-600">
               Want to adjust your answers?{' '}
-              <Link to="/start" className="font-semibold text-primary hover:text-primary-dark">
+              <Link to={ROUTES.start} className="font-semibold text-primary hover:text-primary-dark">
                 Return to questionnaire
               </Link>
             </p>

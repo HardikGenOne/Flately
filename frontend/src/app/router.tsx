@@ -12,30 +12,31 @@ import { DiscoveryPage } from '@/features/discovery/DiscoveryPage'
 import { MatchesPage } from '@/features/matches/MatchesPage'
 import { ChatPage } from '@/features/chat/ChatPage'
 import { ProfileEditorPage } from '@/features/profile/ProfileEditorPage'
+import { APP_CHILD_ROUTE_SEGMENTS, ROUTES } from '@/app/routes'
 
 export const router = createBrowserRouter([
   {
-    path: '/',
+    path: ROUTES.home,
     element: <LandingPage />,
   },
   {
-    path: '/login',
+    path: ROUTES.login,
     element: <LoginPage />,
   },
   {
-    path: '/signup',
+    path: ROUTES.signup,
     element: <SignupPage />,
   },
   {
-    path: '/start',
+    path: ROUTES.start,
     element: <PreAuthQuestionnairePage />,
   },
   {
-    path: '/auth/callback',
+    path: ROUTES.authCallback,
     element: <GoogleAuthCallbackPage />,
   },
   {
-    path: '/app',
+    path: ROUTES.appRoot,
     element: <AppLayout />,
     children: [
       {
@@ -47,7 +48,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'onboarding',
+        path: APP_CHILD_ROUTE_SEGMENTS.onboarding,
         element: (
           <ProtectedRoute allowIncompleteProfile>
             <OnboardingPage />
@@ -55,7 +56,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'discover',
+        path: APP_CHILD_ROUTE_SEGMENTS.discover,
         element: (
           <ProtectedRoute>
             <DiscoveryPage />
@@ -63,7 +64,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'matches',
+        path: APP_CHILD_ROUTE_SEGMENTS.matches,
         element: (
           <ProtectedRoute>
             <MatchesPage />
@@ -71,7 +72,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'chat/:matchId?',
+        path: APP_CHILD_ROUTE_SEGMENTS.chat,
         element: (
           <ProtectedRoute>
             <ChatPage />
@@ -79,7 +80,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'profile',
+        path: APP_CHILD_ROUTE_SEGMENTS.profile,
         element: (
           <ProtectedRoute>
             <ProfileEditorPage />
@@ -90,6 +91,6 @@ export const router = createBrowserRouter([
   },
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <Navigate to={ROUTES.home} replace />,
   },
 ])

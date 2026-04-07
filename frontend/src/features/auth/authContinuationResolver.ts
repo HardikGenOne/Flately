@@ -1,3 +1,5 @@
+import { ROUTES } from '@/app/routes'
+
 type AuthEntryPoint = 'signup' | 'login' | 'google-callback'
 
 type AuthContinuationContext = {
@@ -16,7 +18,7 @@ class QuestionnaireSourceStrategy implements AuthContinuationStrategy {
   }
 
   resolvePath(): string {
-    return '/app/onboarding'
+    return ROUTES.appOnboarding
   }
 }
 
@@ -26,7 +28,7 @@ class SignupDefaultStrategy implements AuthContinuationStrategy {
   }
 
   resolvePath(): string {
-    return '/app/onboarding'
+    return ROUTES.appOnboarding
   }
 }
 
@@ -36,7 +38,7 @@ class DefaultAppStrategy implements AuthContinuationStrategy {
   }
 
   resolvePath(): string {
-    return '/app'
+    return ROUTES.appRoot
   }
 }
 
@@ -63,7 +65,7 @@ export function resolveAuthContinuationPath(context: AuthContinuationContext): s
 
   const strategy = strategies.find((candidate) => candidate.canHandle(normalizedContext))
   if (!strategy) {
-    return '/app'
+    return ROUTES.appRoot
   }
 
   return strategy.resolvePath(normalizedContext)

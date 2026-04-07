@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ROUTES } from '@/app/routes'
 
 export function LandingPage() {
   return (
@@ -16,7 +17,7 @@ export function LandingPage() {
             <a href="#faq" className="transition hover:text-primary">
               FAQ
             </a>
-            <Link to="/login" className="font-semibold text-slate-700 transition hover:text-primary">
+            <Link to={ROUTES.login} className="font-semibold text-slate-700 transition hover:text-primary">
               Sign in
             </Link>
           </nav>
@@ -38,19 +39,19 @@ export function LandingPage() {
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
-                  to="/start"
+                  to={ROUTES.start}
                   className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
                 >
                   Start compatibility questionnaire
                 </Link>
                 <Link
-                  to="/login"
+                  to={ROUTES.login}
                   className="rounded-xl border border-neutral-border bg-surface px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   Sign in
                 </Link>
                 <Link
-                  to="/signup"
+                  to={ROUTES.signup}
                   className="text-sm font-semibold text-primary transition hover:text-primary-dark"
                 >
                   Skip to account creation
@@ -164,7 +165,7 @@ export function LandingPage() {
             <a href="#how-it-works" className="hover:text-primary">How it works</a>
             <a href="#trust" className="hover:text-primary">Safety</a>
             <a href="mailto:support@flately.app" className="hover:text-primary">Support</a>
-            <Link to="/login" className="hover:text-primary">Login</Link>
+            <Link to={ROUTES.login} className="hover:text-primary">Login</Link>
           </div>
         </div>
       </footer>
