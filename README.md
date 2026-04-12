@@ -30,23 +30,37 @@ Our app improves this by combining:
 
 ```mermaid
 flowchart LR
-  Landing[Landing /] --> Start[Questionnaire /start]
+  Landing[Landing] --> Start[Questionnaire]
   Start --> Auth{Auth Choice}
-  Auth --> Signup[Signup /signup]
-  Auth --> Login[Login /login]
+  Auth --> Signup[Signup]
+  Auth --> Login[Login]
   Auth --> Google[Google OAuth]
 
-  Signup --> Onboarding[/app/onboarding]
-  Login --> App[/app]
-  Google --> Callback[/auth/callback]
+  Signup --> Onboarding[Onboarding]
+  Login --> App[App Home]
+  Google --> Callback[Callback]
   Callback --> App
 
   Onboarding --> App
-  App --> Discover[/app/discover]
-  Discover --> Matches[/app/matches]
-  Matches --> Chat[/app/chat/:matchId]
-  App --> Profile[/app/profile]
+  App --> Discover[Discover]
+  Discover --> Matches[Matches]
+  Matches --> Chat[Chat]
+  App --> Profile[Profile]
 ```
+
+Route mapping:
+
+- Landing: `/`
+- Questionnaire: `/start`
+- Signup: `/signup`
+- Login: `/login`
+- Callback: `/auth/callback`
+- Onboarding: `/app/onboarding`
+- App Home: `/app`
+- Discover: `/app/discover`
+- Matches: `/app/matches`
+- Chat: `/app/chat/:matchId?`
+- Profile: `/app/profile`
 
 ---
 
@@ -144,9 +158,7 @@ All current UML and ERD diagrams are linked here.
 
 ### Highlighted (full-width)
 
-![Sequence Diagram](docs/svg/05-sequence-diagram.svg)
-
-![ERD Diagram](docs/svg/06-erd-diagram.svg)
+Click any section below to expand diagram previews.
 
 <!-- markdownlint-disable MD033 -->
 <details>
@@ -157,9 +169,37 @@ All current UML and ERD diagrams are linked here.
 </details>
 
 <details>
+<summary>Object Diagram (click to expand)</summary>
+
+![Object Diagram](docs/svg/02-object-diagram.svg)
+
+</details>
+
+<details>
 <summary>Use Case Diagram (click to expand)</summary>
 
 ![Use Case Diagram](docs/svg/03-use-case-diagram.svg)
+
+</details>
+
+<details>
+<summary>Activity Diagram (click to expand)</summary>
+
+![Activity Diagram](docs/svg/04-activity-diagram.svg)
+
+</details>
+
+<details>
+<summary>Sequence Diagram (click to expand)</summary>
+
+![Sequence Diagram](docs/svg/05-sequence-diagram.svg)
+
+</details>
+
+<details>
+<summary>ERD Diagram (click to expand)</summary>
+
+![ERD Diagram](docs/svg/06-erd-diagram.svg)
 
 </details>
 <!-- markdownlint-enable MD033 -->
