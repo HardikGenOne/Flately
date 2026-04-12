@@ -544,7 +544,7 @@ npm run typecheck    # tsc --noEmit
 ```bash
 cd frontend
 npm install
-npm run dev          # vite dev server (typically 5173, app target URL may use 5174)
+npm run dev          # vite dev server on http://localhost:5174 (default)
 npm run build        # vite build → dist/
 npm run preview      # vite preview (production build preview)
 npm run lint         # eslint

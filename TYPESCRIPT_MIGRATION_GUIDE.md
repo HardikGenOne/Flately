@@ -1,5 +1,8 @@
 # 🚀 TypeScript Migration Guide - Flately
 
+> Historical scope notice: this guide documents migration-era steps and may include legacy Auth0/old-path references.
+> For current runtime implementation, use [docs/historical-archive.md](docs/historical-archive.md) and then follow [docs/project-setup.md](docs/project-setup.md).
+
 ## Quick Start
 
 This guide will help you migrate the Flately MERN stack application from JavaScript to TypeScript systematically.
@@ -142,7 +145,7 @@ src/config/prisma.js → prisma.ts
 
 **Step 2: Middleware**
 ```
-src/middlewares/auth0.middleware.js → auth0.middleware.ts
+src/middlewares/auth0.middleware.js → jwt.middleware.ts
 ```
 
 **Step 3: Services (all modules)**

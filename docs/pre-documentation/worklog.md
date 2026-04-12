@@ -1,5 +1,9 @@
 # Phase 1 Worklog
 
+> STATUS: Historical artifact.
+> Archive boundary guide: [../historical-archive.md](../historical-archive.md).
+> For current runtime implementation, use [../project-setup.md](../project-setup.md) and [../product-user-flow.md](../product-user-flow.md).
+
 Date: 2026-04-04
 Scope: PA-001 and PA-006 only
 

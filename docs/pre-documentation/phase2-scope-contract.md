@@ -2,6 +2,7 @@
 
 > STATUS: Historical artifact. Phase 2 completed.
 > Current source of truth: [../architecture.md](../architecture.md), [../backend-code-reference.md](../backend-code-reference.md).
+> Archive boundary guide: [../historical-archive.md](../historical-archive.md).
 
 Date: 2026-04-04
 In-scope IDs: PA-003, PA-004 (completed)

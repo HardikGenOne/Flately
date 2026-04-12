@@ -55,6 +55,7 @@ CLOUDINARY_UPLOAD_FOLDER="flately/profiles"
 
 Notes:
 - `FRONTEND_URL` should match the frontend origin used for login callbacks.
+- Default frontend origin is `http://localhost:5174` (from `frontend/package.json` dev script).
 - If your frontend runs on a different origin (for example `http://localhost:5173`), update `FRONTEND_URL` accordingly.
 
 ### Generate Prisma Client
@@ -110,13 +111,13 @@ npm run dev
 ```bash
 cd frontend
 npm run dev
-# Output: Local URL printed by Vite (commonly http://localhost:5173)
+# Output: Local URL printed by Vite (default: http://localhost:5174)
 ```
 
 ### Verify
 
 - **Backend health**: `curl http://localhost:4000/health` → `{ "status": "ok" }`
-- **Frontend**: Open the Vite local URL shown in terminal (commonly `http://localhost:5173`)
+- **Frontend**: Open the Vite local URL shown in terminal (default: `http://localhost:5174`)
 - **OAuth callback target**: Ensure backend `FRONTEND_URL` matches the frontend origin used during sign-in
 - **Cloudinary signature check**: authenticated `POST /uploads/signature` should return signature payload when Cloudinary env is configured
 
@@ -182,7 +183,7 @@ flately-full_stack/
 
 | Script | Command | Purpose |
 |---|---|---|
-| `dev` | `vite` | Dev server (port assigned by Vite) |
+| `dev` | `vite --host 127.0.0.1 --port 5174` | Dev server on `http://localhost:5174` |
 | `build` | `vite build` | Production build to `dist/` |
 | `preview` | `vite preview` | Preview production build |
 | `lint` | `eslint .` | Run linter |
@@ -202,6 +203,7 @@ flately-full_stack/
 | [`frontend-guide.md`](./frontend-guide.md) | Frontend architecture, design system, page breakdowns, Redux slices |
 | [`backend-code-reference.md`](./backend-code-reference.md) | Current backend architecture baseline with compatibility snippets |
 | [`minimal-ui-redesign-plan.md`](./minimal-ui-redesign-plan.md) | Forward plan for minimal frontend redesign and verification-first rollout |
+| [`historical-archive.md`](./historical-archive.md) | Historical docs boundary and legacy-to-current mapping guide |
 | [`project-setup.md`](./project-setup.md) | This file — setup, scripts, directory structure |
 
 ---

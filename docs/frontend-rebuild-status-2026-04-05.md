@@ -1,5 +1,8 @@
 # Frontend Rebuild Status (2026-04-05)
 
+> Historical scope notice: this file is a rebuild checkpoint snapshot.
+> For current runtime behavior and implementation decisions, use [historical-archive.md](./historical-archive.md), [project-setup.md](./project-setup.md), and [product-user-flow.md](./product-user-flow.md).
+
 ## Scope Completed In This Slice
 
 ### 1. Rebuild Orchestration Assets (Viberes)
@@ -34,7 +37,7 @@
 	- `backend/src/modules/auth/auth.routes.ts`
 - Mounted `/auth` routes in `backend/src/app.ts`.
 - Switched env contract from Auth0-focused keys to JWT/Google keys in `backend/src/config/env.ts`.
-- Replaced auth middleware behavior in `backend/src/middlewares/auth0.middleware.ts` with local JWT bearer verification while preserving import path compatibility.
+- Replaced auth middleware behavior with local JWT bearer verification in `backend/src/middlewares/jwt.middleware.ts`.
 - Updated user profile coupling in users service/controller to first-party identity fields.
 - Updated Prisma user model (`passwordHash`, `googleId`, `updatedAt`) in `backend/prisma/schema.prisma`.
 

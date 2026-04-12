@@ -1,5 +1,8 @@
 # Design Pattern Application Report
 
+> Historical scope notice: this report is a point-in-time architecture audit and may reference legacy frontend/auth stack labels.
+> Before implementation, align with current runtime docs in [docs/historical-archive.md](docs/historical-archive.md).
+
 ## 1. Executive Summary
 
 ### Pattern Audit Report

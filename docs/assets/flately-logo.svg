@@ -1,0 +1,30 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flately logo">
+  <defs>
+    <linearGradient id="leftHouse" x1="320" y1="160" x2="520" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A8EACF"/>
+      <stop offset="1" stop-color="#7ED2B3"/>
+    </linearGradient>
+    <linearGradient id="rightHouse" x1="620" y1="160" x2="820" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1CAE7F"/>
+      <stop offset="1" stop-color="#14956E"/>
+    </linearGradient>
+    <linearGradient id="centerBlend" x1="600" y1="210" x2="600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F4C5C" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#0A3742" stop-opacity="0.88"/>
+    </linearGradient>
+    <linearGradient id="wordmark" x1="210" y1="615" x2="1000" y2="715" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#243A49"/>
+      <stop offset="1" stop-color="#131E28"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="900" fill="#ECECEC"/>
+
+  <path d="M320 275L470 130C487 113 513 113 530 130L680 275C692 288 700 307 700 326V500C700 527 678 549 651 549H369C342 549 320 527 320 500V326C320 307 328 288 340 275H320Z" fill="url(#leftHouse)"/>
+
+  <path d="M500 275L650 130C667 113 693 113 710 130L860 275C872 288 880 307 880 326V500C880 527 858 549 831 549H549C522 549 500 527 500 500V326C500 307 508 288 520 275H500Z" fill="url(#rightHouse)"/>
+
+  <path d="M500 326C500 307 508 288 520 275L650 145L780 275C792 288 800 307 800 326V500C800 527 778 549 751 549H549C522 549 500 527 500 500V326Z" fill="url(#centerBlend)"/>
+
+  <text x="600" y="815" text-anchor="middle" fill="url(#wordmark)" font-family="Sora, Avenir Next, Segoe UI, sans-serif" font-size="220" font-weight="700" letter-spacing="2">flately</text>
+</svg>

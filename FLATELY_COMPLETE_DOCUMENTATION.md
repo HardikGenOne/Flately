@@ -1,6 +1,8 @@
 # 🏠 Flately - Complete Technical Documentation
 
 > Note: This file includes historical snapshots from earlier architecture phases.
+> Historical sections may reference legacy Auth0 and JavaScript-era file names; treat those as archival unless confirmed in current docs.
+> Archive boundary guide: [docs/historical-archive.md](docs/historical-archive.md).
 > For current production flow and auth behavior, use `docs/product-user-flow.md` and `docs/frontend-guide.md` as source of truth.
 > Latest runtime QA evidence for manual-auth flow is documented in `docs/manual-auth-end-to-end-verification.md`.
 > Full implementation handoff for new developers is documented in `docs/complete-implementation-handoff.md`.

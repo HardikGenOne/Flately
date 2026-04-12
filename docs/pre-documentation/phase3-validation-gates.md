@@ -2,6 +2,7 @@
 
 > STATUS: Historical artifact. Phase 3 completed.
 > Current source of truth: [../matching-algorithm.md](../matching-algorithm.md), [../backend-code-reference.md](../backend-code-reference.md).
+> Archive boundary guide: [../historical-archive.md](../historical-archive.md).
 
 Date: 2026-04-04
 Scope: P3-005-A, P3-005-B, P3-002-A, P3-002-B (completed)

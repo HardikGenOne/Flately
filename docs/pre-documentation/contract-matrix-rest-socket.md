@@ -2,6 +2,7 @@
 
 > STATUS: Historical artifact. Phase 1 contract alignment is completed.
 > Current source of truth: [../api-reference.md](../api-reference.md), [../frontend-guide.md](../frontend-guide.md), [../architecture.md](../architecture.md).
+> Archive boundary guide: [../historical-archive.md](../historical-archive.md).
 
 Date: 2026-04-04
 Scope: PA-001 only (completed)
