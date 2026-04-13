@@ -1,6 +1,6 @@
 # Flately
 
-![Flately Logo](docs/assets/flately-logo.svg)
+![Flately Logo](docs/assets/logo.png)
 
 ![Flately animated heading](https://readme-typing-svg.demolab.com?font=Sora&weight=700&size=26&duration=2500&pause=900&color=0F4C5C&center=true&vCenter=true&width=980&lines=Flately+%E2%80%94+Roommate+Matching+Platform;Smart+Roommate+Discovery+with+Real-time+Chat;Built+with+TypeScript+from+Frontend+to+Backend)
 

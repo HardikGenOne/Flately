@@ -25,7 +25,7 @@ export function GoogleAuthCallbackPage() {
       return
     }
 
-    const exchangeCodeParam = searchParams.get('code')
+    const exchangeCodeParam = searchParams.get('code') ?? searchParams.get('google_code')
     const callbackError = searchParams.get('error')
 
     if (callbackError) {

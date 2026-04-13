@@ -225,65 +225,79 @@ class DefaultScoringStrategy implements ScoringStrategy {
   }
 }
 
-export async function findMatchesForUser(userId: string) {
-  const eligibilityStrategy: EligibilityStrategy = new DefaultEligibilityStrategy();
-  const scoringStrategy: ScoringStrategy = new DefaultScoringStrategy();
+export class MatchingService {
+  constructor(
+    private readonly eligibilityStrategy: EligibilityStrategy = new DefaultEligibilityStrategy(),
+    private readonly scoringStrategy: ScoringStrategy = new DefaultScoringStrategy(),
+  ) {}
 
-  const userProfile = await prisma.profile.findUnique({ where: { userId } });
-  const userPref = await prisma.preference.findUnique({ where: { userId } });
+  async findMatchesForUser(userId: string) {
+    const userProfile = await prisma.profile.findUnique({ where: { userId } });
+    const userPref = await prisma.preference.findUnique({ where: { userId } });
 
-  if (!userProfile || !userPref || !userProfile.onboardingCompleted) {
-    throw new Error('ONBOARDING_REQUIRED');
-  }
-
-  let candidateProfiles: ProfileRecord[] = [];
-  try {
-    candidateProfiles = await prisma.profile.findMany({
-      where: { userId: { not: userId } },
-      select: {
-        userId: true,
-        city: true,
-        gender: true,
-      },
-    });
-  } catch (error) {
-    if (!isLegacyUpdatedAtError(error)) {
-      throw error;
+    if (!userProfile || !userPref || !userProfile.onboardingCompleted) {
+      throw new Error('ONBOARDING_REQUIRED');
     }
 
-    await repairLegacyProfileTimestamps();
+    let candidateProfiles: ProfileRecord[] = [];
+    try {
+      candidateProfiles = await prisma.profile.findMany({
+        where: { userId: { not: userId } },
+        select: {
+          userId: true,
+          city: true,
+          gender: true,
+        },
+      });
+    } catch (error) {
+      if (!isLegacyUpdatedAtError(error)) {
+        throw error;
+      }
 
-    candidateProfiles = await prisma.profile.findMany({
-      where: { userId: { not: userId } },
-      select: {
-        userId: true,
-        city: true,
-        gender: true,
-      },
+      await repairLegacyProfileTimestamps();
+
+      candidateProfiles = await prisma.profile.findMany({
+        where: { userId: { not: userId } },
+        select: {
+          userId: true,
+          city: true,
+          gender: true,
+        },
+      });
+    }
+    const candidatePrefs = await prisma.preference.findMany();
+    const viewerCandidate = mapToCandidateShape(userProfile, userPref);
+    const viewerPreference = mapToPreferenceShape(userPref);
+    const candidatePreferencesByUserId = buildPreferenceLookup(candidatePrefs);
+
+    return rankEligibleCandidates({
+      viewerCandidate,
+      viewerPreference,
+      candidates: candidateProfiles,
+      candidatePreferencesByUserId,
+      eligibilityStrategy: this.eligibilityStrategy,
+      scoringStrategy: this.scoringStrategy,
     });
   }
-  const candidatePrefs = await prisma.preference.findMany();
-  const viewerCandidate = mapToCandidateShape(userProfile, userPref);
-  const viewerPreference = mapToPreferenceShape(userPref);
-  const candidatePreferencesByUserId = buildPreferenceLookup(candidatePrefs);
 
-  return rankEligibleCandidates({
-    viewerCandidate,
-    viewerPreference,
-    candidates: candidateProfiles,
-    candidatePreferencesByUserId,
-    eligibilityStrategy,
-    scoringStrategy,
-  });
+  async assertOnboardingCompleted(userId: string): Promise<void> {
+    const profile = await prisma.profile.findUnique({ where: { userId } });
+    const preference = await prisma.preference.findUnique({ where: { userId } });
+
+    if (!profile || !preference || !profile.onboardingCompleted) {
+      throw new Error('ONBOARDING_REQUIRED');
+    }
+  }
+}
+
+const matchingService = new MatchingService();
+
+export async function findMatchesForUser(userId: string) {
+  return matchingService.findMatchesForUser(userId);
 }
 
 export const findMatches = findMatchesForUser;
 
 export async function assertOnboardingCompleted(userId: string): Promise<void> {
-  const profile = await prisma.profile.findUnique({ where: { userId } });
-  const preference = await prisma.preference.findUnique({ where: { userId } });
-
-  if (!profile || !preference || !profile.onboardingCompleted) {
-    throw new Error('ONBOARDING_REQUIRED');
-  }
+  return matchingService.assertOnboardingCompleted(userId);
 }

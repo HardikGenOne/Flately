@@ -1,0 +1,10 @@
+<svg width="768" height="768" viewBox="0 0 768 768" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="leftHouse" x1="170" y1="150" x2="520" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9BE5C7"/>
+      <stop offset="1" stop-color="#7DD0B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="768" height="768" fill="#ECECEC"/>
+  <path d="M210 278L318 170C326 162 334 162 342 170L450 278V386C450 409 431 428 408 428H252C229 428 210 409 210 386V278Z" fill="url(#leftHouse)"/>
+</svg>

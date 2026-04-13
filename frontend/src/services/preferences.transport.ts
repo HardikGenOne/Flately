@@ -6,17 +6,29 @@ type PreferencePayload = Omit<
   'id' | 'userId' | 'createdAt' | 'updatedAt'
 >
 
+export class PreferencesTransport {
+  getMyPreferences(): Promise<Preference | null> {
+    return apiRequest<Preference | null>({
+      method: 'GET',
+      url: '/preferences/me',
+    })
+  }
+
+  saveMyPreferences(payload: PreferencePayload): Promise<Preference> {
+    return apiRequest<Preference>({
+      method: 'POST',
+      url: '/preferences/me',
+      data: payload,
+    })
+  }
+}
+
+const preferencesTransport = new PreferencesTransport()
+
 export function getMyPreferences(): Promise<Preference | null> {
-  return apiRequest<Preference | null>({
-    method: 'GET',
-    url: '/preferences/me',
-  })
+  return preferencesTransport.getMyPreferences()
 }
 
 export function saveMyPreferences(payload: PreferencePayload): Promise<Preference> {
-  return apiRequest<Preference>({
-    method: 'POST',
-    url: '/preferences/me',
-    data: payload,
-  })
+  return preferencesTransport.saveMyPreferences(payload)
 }

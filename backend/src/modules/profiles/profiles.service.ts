@@ -32,10 +32,22 @@ class ProfileUpsertService extends UpsertByUserIdService<
 
 const profileUpsertService = new ProfileUpsertService();
 
+export class ProfileService {
+  async getProfileByUserId(userId: string) {
+    return prisma.profile.findUnique({ where: { userId } });
+  }
+
+  async createOrUpdateProfile(userId: string, data: ProfileUpdateData) {
+    return profileUpsertService.upsert(userId, data);
+  }
+}
+
+const profileService = new ProfileService();
+
 export async function getProfileByUserId(userId: string) {
-  return prisma.profile.findUnique({ where: { userId } });
+  return profileService.getProfileByUserId(userId);
 }
 
 export async function createOrUpdateProfile(userId: string, data: ProfileUpdateData) {
-  return profileUpsertService.upsert(userId, data);
+  return profileService.createOrUpdateProfile(userId, data);
 }

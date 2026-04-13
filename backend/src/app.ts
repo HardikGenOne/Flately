@@ -26,6 +26,15 @@ function buildAllowedOrigins(): string[] {
   return [...new Set(defaults.filter(Boolean))];
 }
 
+function isLocalDevOrigin(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    return parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 const app = express();
 app.use(helmet());
 
@@ -34,7 +43,7 @@ const allowedOrigins = buildAllowedOrigins();
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
         callback(null, true);
         return;
       }

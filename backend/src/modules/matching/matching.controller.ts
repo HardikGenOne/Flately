@@ -2,8 +2,16 @@ import { Response } from 'express';
 import { AuthRequest } from '../../types/auth';
 import { findMatches } from './matching.service';
 
+export class MatchingController {
+  async getMatches(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.userId as string;
+    const matches = await findMatches(userId);
+    res.json(matches);
+  }
+}
+
+const matchingController = new MatchingController();
+
 export async function getMatches(req: AuthRequest, res: Response): Promise<void> {
-  const userId = req.userId as string;
-  const matches = await findMatches(userId);
-  res.json(matches);
+  return matchingController.getMatches(req, res);
 }

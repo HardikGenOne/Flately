@@ -67,14 +67,26 @@ class PreferenceUpsertService extends UpsertByUserIdService<
 
 const preferenceUpsertService = new PreferenceUpsertService();
 
+export class PreferencesService {
+  async getPreferences(userId: string) {
+    return prisma.preference.findUnique({ where: { userId } });
+  }
+
+  async savePreferences(userId: string, data: PreferenceData) {
+    if (!validateWeights(data)) {
+      throw new Error('INVALID_WEIGHTS');
+    }
+
+    return preferenceUpsertService.upsert(userId, data);
+  }
+}
+
+const preferencesService = new PreferencesService();
+
 export async function getPreferences(userId: string) {
-  return prisma.preference.findUnique({ where: { userId } });
+  return preferencesService.getPreferences(userId);
 }
 
 export async function savePreferences(userId: string, data: PreferenceData) {
-  if (!validateWeights(data)) {
-    throw new Error('INVALID_WEIGHTS');
-  }
-
-  return preferenceUpsertService.upsert(userId, data);
+  return preferencesService.savePreferences(userId, data);
 }
