@@ -149,7 +149,7 @@ All current UML and ERD diagrams are linked here.
 
 | Diagram | SVG | PDF | Focus |
 | --- | --- | --- | --- |
-| 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure |
+| 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure. Canonical source: [Mermaid](docs/diagrams/01-class-diagram.mmd) |
 | 02 Object Diagram | [SVG](docs/svg/02-object-diagram.svg) | [PDF](docs/pdf/02-object-diagram.pdf) | Runtime object snapshot |
 | 03 Use Case Diagram | [SVG](docs/svg/03-use-case-diagram.svg) | [PDF](docs/pdf/03-use-case-diagram.pdf) | Actor-system goals |
 | 04 Activity Diagram | [SVG](docs/svg/04-activity-diagram.svg) | [PDF](docs/pdf/04-activity-diagram.pdf) | Process and guard flow |
@@ -163,6 +163,8 @@ Click any section below to expand diagram previews.
 <!-- markdownlint-disable MD033 -->
 <details>
 <summary>Class Diagram (click to expand)</summary>
+
+Canonical Mermaid source: [docs/diagrams/01-class-diagram.mmd](docs/diagrams/01-class-diagram.mmd)
 
 ![Class Diagram](docs/svg/01-class-diagram.svg)
 

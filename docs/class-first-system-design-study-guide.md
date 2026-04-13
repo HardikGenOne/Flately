@@ -45,6 +45,130 @@ To avoid hallucination, context was gathered in the following order:
   - Declares all routes including `/auth/callback` -> `GoogleAuthCallbackPage`.
   - Wraps app routes with `ProtectedRoute` as needed.
 
+### 3.3 Canonical class diagram (source-backed)
+
+Canonical source file: `docs/diagrams/01-class-diagram.mmd`
+
+```mermaid
+classDiagram
+  direction LR
+
+  class AuthController
+  class AuthService
+  class DiscoveryController
+  class DiscoveryService
+  class MatchesController
+  class MatchesService
+  class MatchingController
+  class MatchingService
+  class ProfilesController
+  class ProfileService
+  class PreferencesController
+  class PreferencesService
+  class ChatController
+  class ChatService
+  class UploadsController
+  class UploadsService
+  class UsersController
+  class UsersService
+
+  class UpsertByUserIdService {
+    <<abstract>>
+    +upsert(userId, data)
+  }
+  class ProfileUpsertService
+  class PreferenceUpsertService
+
+  class EligibilityStrategy {
+    <<interface>>
+    +isEligible(userA, userB)
+  }
+  class ScoringStrategy {
+    <<interface>>
+    +calculateScore(prefA, prefB)
+  }
+  class DefaultEligibilityStrategy
+  class DefaultScoringStrategy
+
+  class RequestStrategy {
+    <<interface>>
+    +send(request)
+  }
+  class FetchRequestStrategy
+  class HttpClientAdapter
+  class ApiError
+
+  class AuthTransport
+  class DiscoveryTransport
+  class MatchesTransport
+  class ProfileTransport
+  class PreferencesTransport
+  class ChatTransport
+  class CloudinaryService
+
+  class AuthContinuationStrategy {
+    <<interface>>
+    +canHandle(context)
+    +resolvePath(context)
+  }
+  class QuestionnaireSourceStrategy
+  class SignupDefaultStrategy
+  class DefaultAppStrategy
+
+  class PrismaClient {
+    <<external>>
+  }
+
+  AuthController ..> AuthService : uses auth APIs
+  DiscoveryController ..> DiscoveryService : feed and swipe
+  MatchesController ..> MatchesService : list matches
+  MatchesController ..> DiscoveryService : connect via like
+  MatchingController ..> MatchingService : rank endpoint
+  ProfilesController ..> ProfileService : profile CRUD
+  PreferencesController ..> PreferencesService : preference CRUD
+  ChatController ..> ChatService : conversation flow
+  UploadsController ..> UploadsService : signature endpoint
+  UsersController ..> UsersService : profile bootstrap
+
+  DiscoveryService ..> MatchingService : onboarding and ranking
+  DiscoveryService ..> MatchesService : reciprocal match check
+  MatchesService ..> MatchingService : compatibility map
+
+  ProfileService *-- ProfileUpsertService : owns
+  PreferencesService *-- PreferenceUpsertService : owns
+  ProfileUpsertService --|> UpsertByUserIdService : extends template
+  PreferenceUpsertService --|> UpsertByUserIdService : extends template
+
+  DefaultEligibilityStrategy ..|> EligibilityStrategy : implements
+  DefaultScoringStrategy ..|> ScoringStrategy : implements
+  MatchingService o-- EligibilityStrategy : injected policy
+  MatchingService o-- ScoringStrategy : injected policy
+
+  FetchRequestStrategy ..|> RequestStrategy : implements
+  HttpClientAdapter o-- RequestStrategy : injected transport
+  AuthTransport ..> HttpClientAdapter : auth calls
+  DiscoveryTransport ..> HttpClientAdapter : discovery calls
+  MatchesTransport ..> HttpClientAdapter : matches calls
+  ProfileTransport ..> HttpClientAdapter : profile calls
+  PreferencesTransport ..> HttpClientAdapter : preference calls
+  ChatTransport ..> HttpClientAdapter : chat calls
+  CloudinaryService ..> HttpClientAdapter : signed upload config
+  HttpClientAdapter ..> ApiError : raises on failures
+
+  QuestionnaireSourceStrategy ..|> AuthContinuationStrategy : implements
+  SignupDefaultStrategy ..|> AuthContinuationStrategy : implements
+  DefaultAppStrategy ..|> AuthContinuationStrategy : implements
+
+  AuthService ..> PrismaClient : user and oauth persistence
+  DiscoveryService ..> PrismaClient : swipes and profile join
+  MatchesService ..> PrismaClient : match and conversation join
+  MatchingService ..> PrismaClient : profile and preference reads
+  ProfileUpsertService ..> PrismaClient : profile upsert
+  PreferenceUpsertService ..> PrismaClient : preference upsert
+  ChatService ..> PrismaClient : conversation and message persistence
+  UsersService ..> PrismaClient : get-or-create user
+```
+
 ## 4. Class-First Contract Implemented
 
 Every refactored area uses this compatibility-safe shape:
