@@ -1,6 +1,6 @@
 # Flately - Backend Code Reference (Current Baseline)
 
-Last updated: 2026-04-05
+Last updated: 2026-04-14
 
 Status:
 - This is a current architecture baseline with key snippets.
@@ -57,6 +57,11 @@ File: backend/src/middlewares/controller-chain.middleware.ts
 Purpose:
 - Standardize auth preconditions and error mapping across controllers.
 - Keep controller logic focused on request/response orchestration.
+
+Role split inside middleware chain:
+- `requireAuthenticatedUser(...)` is the auth guard. It checks `req.userId` and returns `401` early when missing.
+- `domainErrorToHttp(...)` is the domain-to-HTTP mapper. It translates thrown domain codes (for example `ONBOARDING_REQUIRED`) into route-specific status/body responses.
+- `withAuthenticatedController(...)` composes guard -> controller -> error mapper in one reusable chain.
 
 Key pattern:
 
@@ -260,7 +265,78 @@ io.to(conversationId).emit('new_message', payload);
 
 ---
 
-## 9) File Pointers for Further Reading
+## 9) Auth Module Snapshot (Factory Refactor)
+
+Files:
+- backend/src/modules/auth/auth.routes.ts
+- backend/src/modules/auth/auth.controller.ts
+- backend/src/modules/auth/auth.service.ts
+
+Route surface (unchanged):
+
+```ts
+router.post('/signup', signup);
+router.post('/login', login);
+router.get('/google/start', startGoogleAuth);
+router.get('/google/callback', googleCallback);
+router.get('/google/exchange', exchangeGoogleCode);
+```
+
+Controller shape (updated):
+- Function-based handlers are exported directly.
+- No `AuthController` class singleton instance.
+- Error mapping and redirect orchestration stay in controller module.
+
+Service shape (updated):
+- Exported auth functions remain stable:
+  - `signUpWithEmail`
+  - `signInWithEmail`
+  - `getGoogleAuthorizationUrl`
+  - `completeGoogleAuthorization`
+  - `consumeGoogleExchangeCode`
+- Concrete factory classes now centralize strategy creation:
+  - `DefaultEmailAuthStrategyFactory`
+  - `DefaultOAuthAuthorizationStrategyFactory`
+  - `AuthStrategyFactory`
+
+Correctness verdict (current implementation):
+- Pattern application is correct for current scope: Strategy + Factory are applied with stable exported function contracts.
+- Auth logic remains backward-compatible at route surface while removing auth service/controller singleton wrappers.
+
+Current trade-offs:
+- OAuth state and one-time exchange codes are stored in in-memory Maps, which is acceptable for single-instance runtime but not ideal for multi-instance horizontal scaling.
+- Factory graph is rebuilt per exported auth call; overhead is low but introduces extra object churn.
+- No dedicated `auth.service.test.ts` file currently exists, so confidence relies more on integration behavior than direct auth unit tests.
+
+Compatibility note:
+- External endpoint contract is unchanged.
+- Internal auth implementation no longer uses service/controller singleton class instances.
+
+---
+
+## 10) In-Progress Review Snapshot (Auth + Class Diagram)
+
+Auth review outcome:
+- No blocking regressions were found in the current auth refactor.
+- Backend typecheck passed after these auth changes.
+- Route surface remains stable (`/signup`, `/login`, `/google/start`, `/google/callback`, `/google/exchange`).
+
+Auth risk notes:
+- OAuth state and exchange code stores remain process-local in-memory Maps, which is not multi-instance safe.
+- Auth strategy factories are rebuilt per exported call; this is acceptable overhead now but adds object churn.
+
+Class diagram review outcome:
+- `docs/diagrams/01-class-diagram.mmd` now models auth as factory-driven (`EmailAuthStrategyFactory`, `OAuthAuthorizationStrategyFactory`, `AuthStrategyFactory`) and removes obsolete `AuthController`/`AuthService` class nodes.
+- Auth-to-persistence dependencies were updated to concrete strategy classes (`EmailSignUpStrategy`, `EmailSignInStrategy`, `GoogleOAuthStrategy`) to match source behavior.
+- Diagram quality checks from the Mermaid class/quality guidelines were satisfied (explicit direction, labeled relations, architecture-depth coverage).
+
+Follow-up recommendations:
+1. Move OAuth state/exchange storage to a shared store before multi-instance deployment.
+2. Add dedicated auth unit tests around factory selection and OAuth state/exchange lifecycle.
+
+---
+
+## 11) File Pointers for Further Reading
 
 - backend/src/app.ts
 - backend/src/middlewares/controller-chain.middleware.ts

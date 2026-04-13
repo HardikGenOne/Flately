@@ -58,8 +58,22 @@ interface OAuthAuthorizationStrategy {
   consumeExchangeCode(code: string): AuthSession;
 }
 
+type EmailAuthIntent = 'signup' | 'signin';
+type OAuthProvider = 'google';
+
+interface EmailAuthStrategyFactory {
+  create(intent: EmailAuthIntent): EmailAuthStrategy;
+}
+
+interface OAuthAuthorizationStrategyFactory {
+  create(provider: OAuthProvider): OAuthAuthorizationStrategy;
+}
+
 const GOOGLE_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_CODE_TTL_MS = 2 * 60 * 1000;
+
+const googleOAuthStatesStore = new Map<string, GoogleOAuthStateEntry>();
+const googleExchangeCodesStore = new Map<string, GoogleExchangeCodeEntry>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -76,8 +90,8 @@ function sanitizeSource(source?: string): string | undefined {
   }
 
   const normalized = source.trim().toLowerCase();
-  if (normalized === 'mobile') {
-    return 'mobile';
+  if (normalized === 'mobile' || normalized === 'app') {
+    return normalized;
   }
 
   return undefined;
@@ -219,8 +233,10 @@ class EmailSignInStrategy implements EmailAuthStrategy {
 }
 
 class GoogleOAuthStrategy implements OAuthAuthorizationStrategy {
-  private readonly googleOAuthStates = new Map<string, GoogleOAuthStateEntry>();
-  private readonly googleExchangeCodes = new Map<string, GoogleExchangeCodeEntry>();
+  constructor(
+    private readonly googleOAuthStates: Map<string, GoogleOAuthStateEntry>,
+    private readonly googleExchangeCodes: Map<string, GoogleExchangeCodeEntry>,
+  ) {}
 
   private cleanExpiredGoogleOAuthState(): void {
     const now = Date.now();
@@ -454,72 +470,88 @@ class GoogleOAuthStrategy implements OAuthAuthorizationStrategy {
   }
 }
 
-export class AuthService {
-  private readonly emailSignUpStrategy = new EmailSignUpStrategy();
-  private readonly emailSignInStrategy = new EmailSignInStrategy();
-  private readonly googleOAuthStrategy = new GoogleOAuthStrategy();
+class DefaultEmailAuthStrategyFactory implements EmailAuthStrategyFactory {
+  private readonly creators: Record<EmailAuthIntent, () => EmailAuthStrategy> = {
+    signup: () => new EmailSignUpStrategy(),
+    signin: () => new EmailSignInStrategy(),
+  };
 
-  private createEmailAuthStrategy(intent: 'signup' | 'signin'): EmailAuthStrategy {
-    switch (intent) {
-      case 'signup':
-        return this.emailSignUpStrategy;
-      case 'signin':
-        return this.emailSignInStrategy;
+  create(intent: EmailAuthIntent): EmailAuthStrategy {
+    const creator = this.creators[intent];
+
+    if (!creator) {
+      throw new Error('UNSUPPORTED_EMAIL_AUTH_INTENT');
     }
-  }
 
-  private createOAuthAuthorizationStrategy(provider: 'google'): OAuthAuthorizationStrategy {
-    switch (provider) {
-      case 'google':
-        return this.googleOAuthStrategy;
-    }
-  }
-
-  async signUpWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-    return this.createEmailAuthStrategy('signup').execute(credentials);
-  }
-
-  async signInWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-    return this.createEmailAuthStrategy('signin').execute(credentials);
-  }
-
-  getGoogleAuthorizationUrl(source?: string, redirectOrigin?: string): string {
-    return this.createOAuthAuthorizationStrategy('google').getAuthorizationUrl(source, redirectOrigin);
-  }
-
-  async completeGoogleAuthorization(
-    code: string,
-    state: string,
-  ): Promise<{ exchangeCode: string; source?: string; redirectOrigin?: string }> {
-    return this.createOAuthAuthorizationStrategy('google').completeAuthorization(code, state);
-  }
-
-  consumeGoogleExchangeCode(code: string): AuthSession {
-    return this.createOAuthAuthorizationStrategy('google').consumeExchangeCode(code);
+    return creator();
   }
 }
 
-const authService = new AuthService();
+class DefaultOAuthAuthorizationStrategyFactory implements OAuthAuthorizationStrategyFactory {
+  constructor(
+    private readonly googleOAuthStates: Map<string, GoogleOAuthStateEntry>,
+    private readonly googleExchangeCodes: Map<string, GoogleExchangeCodeEntry>,
+  ) {}
+
+  create(provider: OAuthProvider): OAuthAuthorizationStrategy {
+    switch (provider) {
+      case 'google':
+        return new GoogleOAuthStrategy(this.googleOAuthStates, this.googleExchangeCodes);
+      default:
+        throw new Error('GOOGLE_OAUTH_NOT_CONFIGURED');
+    }
+  }
+}
+
+class AuthStrategyFactory {
+  constructor(
+    private readonly emailFactory: EmailAuthStrategyFactory,
+    private readonly oauthFactory: OAuthAuthorizationStrategyFactory,
+  ) {}
+
+  createEmailStrategy(intent: EmailAuthIntent): EmailAuthStrategy {
+    return this.emailFactory.create(intent);
+  }
+
+  createOAuthStrategy(provider: OAuthProvider): OAuthAuthorizationStrategy {
+    return this.oauthFactory.create(provider);
+  }
+}
+
+function createAuthStrategyFactory(): AuthStrategyFactory {
+  const emailFactory = new DefaultEmailAuthStrategyFactory();
+  const oauthFactory = new DefaultOAuthAuthorizationStrategyFactory(
+    googleOAuthStatesStore,
+    googleExchangeCodesStore,
+  );
+
+  return new AuthStrategyFactory(emailFactory, oauthFactory);
+}
 
 export async function signUpWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-  return authService.signUpWithEmail(credentials);
+  const factory = createAuthStrategyFactory();
+  return factory.createEmailStrategy('signup').execute(credentials);
 }
 
 export async function signInWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-  return authService.signInWithEmail(credentials);
+  const factory = createAuthStrategyFactory();
+  return factory.createEmailStrategy('signin').execute(credentials);
 }
 
 export function getGoogleAuthorizationUrl(source?: string, redirectOrigin?: string): string {
-  return authService.getGoogleAuthorizationUrl(source, redirectOrigin);
+  const factory = createAuthStrategyFactory();
+  return factory.createOAuthStrategy('google').getAuthorizationUrl(source, redirectOrigin);
 }
 
 export async function completeGoogleAuthorization(
   code: string,
   state: string,
 ): Promise<{ exchangeCode: string; source?: string; redirectOrigin?: string }> {
-  return authService.completeGoogleAuthorization(code, state);
+  const factory = createAuthStrategyFactory();
+  return factory.createOAuthStrategy('google').completeAuthorization(code, state);
 }
 
 export function consumeGoogleExchangeCode(code: string): AuthSession {
-  return authService.consumeGoogleExchangeCode(code);
+  const factory = createAuthStrategyFactory();
+  return factory.createOAuthStrategy('google').consumeExchangeCode(code);
 }

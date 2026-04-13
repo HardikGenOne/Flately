@@ -149,12 +149,20 @@ All current UML and ERD diagrams are linked here.
 
 | Diagram | SVG | PDF | Focus |
 | --- | --- | --- | --- |
-| 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure. Canonical source: [Mermaid](docs/diagrams/01-class-diagram.mmd) |
+| 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure. Updated 2026-04-14 for auth factory refactor. Canonical source: [Mermaid](docs/diagrams/01-class-diagram.mmd) |
 | 02 Object Diagram | [SVG](docs/svg/02-object-diagram.svg) | [PDF](docs/pdf/02-object-diagram.pdf) | Runtime object snapshot |
 | 03 Use Case Diagram | [SVG](docs/svg/03-use-case-diagram.svg) | [PDF](docs/pdf/03-use-case-diagram.pdf) | Actor-system goals |
 | 04 Activity Diagram | [SVG](docs/svg/04-activity-diagram.svg) | [PDF](docs/pdf/04-activity-diagram.pdf) | Process and guard flow |
 | 05 Sequence Diagram | [SVG](docs/svg/05-sequence-diagram.svg) | [PDF](docs/pdf/05-sequence-diagram.pdf) | End-to-end interaction timing |
 | 06 ERD Diagram | [SVG](docs/svg/06-erd-diagram.svg) | [PDF](docs/pdf/06-erd-diagram.pdf) | Data model and relationships |
+
+### Latest Diagram Update (2026-04-14)
+
+- Updated artifact: 01 Class Diagram.
+- Auth layer now models explicit factory composition: EmailAuthStrategyFactory, OAuthAuthorizationStrategyFactory, and AuthStrategyFactory.
+- Legacy auth singleton wrapper nodes were removed from the class model.
+- Prisma dependencies now attach to concrete auth strategies (EmailSignUpStrategy, EmailSignInStrategy, GoogleOAuthStrategy).
+- Canonical source remains [docs/diagrams/01-class-diagram.mmd](docs/diagrams/01-class-diagram.mmd), with rendered outputs in [docs/svg/01-class-diagram.svg](docs/svg/01-class-diagram.svg) and [docs/pdf/01-class-diagram.pdf](docs/pdf/01-class-diagram.pdf).
 
 ### Highlighted (full-width)
 

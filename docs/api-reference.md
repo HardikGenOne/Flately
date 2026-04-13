@@ -65,7 +65,8 @@ Create an email/password account.
 ```
 
 **Error Responses:**
-- `400` — `EMAIL_AND_PASSWORD_REQUIRED` or `PASSWORD_TOO_SHORT`
+
+- `400` — `Email and password are required`
 - `409` — `EMAIL_ALREADY_EXISTS`
 - `500` — `AUTH_STORAGE_CONFLICT`
 
@@ -95,7 +96,8 @@ Authenticate an existing email/password account.
 ```
 
 **Error Responses:**
-- `400` — `EMAIL_AND_PASSWORD_REQUIRED`
+
+- `400` — `Email and password are required`
 - `401` — `INVALID_CREDENTIALS`
 
 The middleware validates the token with `JWT_ACCESS_SECRET` and extracts `req.userId` from `payload.sub` when it is an ObjectId-compatible value.
@@ -134,9 +136,13 @@ Behavior:
 
 Exchange one-time code for a standard Flately auth session.
 
-Query params:
+Input:
 
-- `code` (required)
+- `code` (required, query param in canonical flow)
+
+Compatibility behavior:
+
+- Controller also reads body `code` for mixed-client compatibility.
 
 Success response (200):
 
@@ -154,7 +160,7 @@ Success response (200):
 
 Error responses:
 
-- `400` — `GOOGLE_EXCHANGE_CODE_REQUIRED`
+- `400` — `GOOGLE_AUTH_CODE_MISSING`
 - `400` — `GOOGLE_EXCHANGE_CODE_INVALID`
 
 ### `POST /uploads/signature`

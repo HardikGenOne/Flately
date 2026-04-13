@@ -1,20 +1,29 @@
 classDiagram
   direction LR
 
-  class AuthController
-  class AuthService
   class EmailAuthStrategy {
     <<interface>>
     +execute(credentials)
   }
   class EmailSignUpStrategy
   class EmailSignInStrategy
+  class EmailAuthStrategyFactory {
+    <<interface>>
+    +create(intent)
+  }
+  class DefaultEmailAuthStrategyFactory
   class OAuthAuthorizationStrategy {
     <<interface>>
     +getAuthorizationUrl(source, redirectOrigin)
     +completeAuthorization(code, state)
     +consumeExchangeCode(code)
   }
+  class OAuthAuthorizationStrategyFactory {
+    <<interface>>
+    +create(provider)
+  }
+  class DefaultOAuthAuthorizationStrategyFactory
+  class AuthStrategyFactory
   class GoogleOAuthStrategy
   class DiscoveryController
   class DiscoveryService
@@ -80,12 +89,15 @@ classDiagram
     <<external>>
   }
 
-  AuthController ..> AuthService : uses auth APIs
   EmailSignUpStrategy ..|> EmailAuthStrategy : implements
   EmailSignInStrategy ..|> EmailAuthStrategy : implements
   GoogleOAuthStrategy ..|> OAuthAuthorizationStrategy : implements
-  AuthService o-- EmailAuthStrategy : factory product
-  AuthService o-- OAuthAuthorizationStrategy : factory product
+  DefaultEmailAuthStrategyFactory ..|> EmailAuthStrategyFactory : implements
+  DefaultOAuthAuthorizationStrategyFactory ..|> OAuthAuthorizationStrategyFactory : implements
+  AuthStrategyFactory o-- EmailAuthStrategyFactory : composed factory
+  AuthStrategyFactory o-- OAuthAuthorizationStrategyFactory : composed factory
+  AuthStrategyFactory ..> EmailAuthStrategy : creates
+  AuthStrategyFactory ..> OAuthAuthorizationStrategy : creates
   DiscoveryController ..> DiscoveryService : feed and swipe
   MatchesController ..> MatchesService : list matches
   MatchesController ..> DiscoveryService : connect via like
@@ -125,7 +137,9 @@ classDiagram
   SignupDefaultStrategy ..|> AuthContinuationStrategy : implements
   DefaultAppStrategy ..|> AuthContinuationStrategy : implements
 
-  AuthService ..> PrismaClient : user and oauth persistence
+  EmailSignUpStrategy ..> PrismaClient : user create/check
+  EmailSignInStrategy ..> PrismaClient : user credential lookup
+  GoogleOAuthStrategy ..> PrismaClient : oauth user upsert
   DiscoveryService ..> PrismaClient : swipes and profile join
   MatchesService ..> PrismaClient : match and conversation join
   MatchingService ..> PrismaClient : profile and preference reads

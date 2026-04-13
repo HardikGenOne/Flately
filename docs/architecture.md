@@ -134,6 +134,10 @@ export default [checkJwt, attachUserId] as RequestHandler[];
 - `GET /auth/google/callback`
 - `GET /auth/google/exchange`
 
+Implementation note:
+
+- `/auth/google/exchange` currently accepts `code` from query and also supports body fallback for compatibility with mixed clients.
+
 ### Auth Bootstrap (Frontend)
 
 After session restoration, the app fetches profile state and enforces onboarding guards before entering protected routes.
@@ -192,11 +196,14 @@ backend/src/
 │   └── shared/
 │       └── upsert-by-user-id.service.ts  # Shared upsert lifecycle abstraction
 └── types/
-    ├── api.ts                      # ApiResponse<T>, PaginatedResponse<T>
     ├── auth.ts                     # AuthRequest, AuthTokenPayload
-    ├── database.ts                 # User, Profile, Match interfaces
     └── socket.ts                   # ServerToClientEvents, ClientToServerEvents
 ```
+
+Type inventory note:
+
+- `backend/src/types/api.ts` and `backend/src/types/database.ts` were removed as unused on 2026-04-14.
+- Active backend shared types are `auth.ts` and `socket.ts`.
 
 ### Module Pattern
 

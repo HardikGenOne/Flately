@@ -21,7 +21,7 @@ To avoid hallucination, context was gathered in the following order:
 1. Loaded all mandatory pattern workflow instructions and pattern skills.
 2. Enumerated backend and frontend module files.
 3. Read all relevant service/controller/route/transport/middleware files directly.
-4. Verified class declarations, singleton wrappers, strategy/template types, and socket events from source.
+4. Verified class declarations, factory/strategy wiring, singleton wrappers where still used, and socket events from source.
 5. Cross-checked with tests where behavior contracts are asserted.
 
 ## 3. System Composition Roots (How the App Is Wired)
@@ -53,20 +53,29 @@ Canonical source file: `docs/diagrams/01-class-diagram.mmd`
 classDiagram
   direction LR
 
-  class AuthController
-  class AuthService
   class EmailAuthStrategy {
     <<interface>>
     +execute(credentials)
   }
   class EmailSignUpStrategy
   class EmailSignInStrategy
+  class EmailAuthStrategyFactory {
+    <<interface>>
+    +create(intent)
+  }
+  class DefaultEmailAuthStrategyFactory
   class OAuthAuthorizationStrategy {
     <<interface>>
     +getAuthorizationUrl(source, redirectOrigin)
     +completeAuthorization(code, state)
     +consumeExchangeCode(code)
   }
+  class OAuthAuthorizationStrategyFactory {
+    <<interface>>
+    +create(provider)
+  }
+  class DefaultOAuthAuthorizationStrategyFactory
+  class AuthStrategyFactory
   class GoogleOAuthStrategy
   class DiscoveryController
   class DiscoveryService
@@ -132,12 +141,15 @@ classDiagram
     <<external>>
   }
 
-  AuthController ..> AuthService : uses auth APIs
   EmailSignUpStrategy ..|> EmailAuthStrategy : implements
   EmailSignInStrategy ..|> EmailAuthStrategy : implements
   GoogleOAuthStrategy ..|> OAuthAuthorizationStrategy : implements
-  AuthService o-- EmailAuthStrategy : factory product
-  AuthService o-- OAuthAuthorizationStrategy : factory product
+  DefaultEmailAuthStrategyFactory ..|> EmailAuthStrategyFactory : implements
+  DefaultOAuthAuthorizationStrategyFactory ..|> OAuthAuthorizationStrategyFactory : implements
+  AuthStrategyFactory o-- EmailAuthStrategyFactory : composed factory
+  AuthStrategyFactory o-- OAuthAuthorizationStrategyFactory : composed factory
+  AuthStrategyFactory ..> EmailAuthStrategy : creates
+  AuthStrategyFactory ..> OAuthAuthorizationStrategy : creates
   DiscoveryController ..> DiscoveryService : feed and swipe
   MatchesController ..> MatchesService : list matches
   MatchesController ..> DiscoveryService : connect via like
@@ -177,7 +189,9 @@ classDiagram
   SignupDefaultStrategy ..|> AuthContinuationStrategy : implements
   DefaultAppStrategy ..|> AuthContinuationStrategy : implements
 
-  AuthService ..> PrismaClient : user and oauth persistence
+  EmailSignUpStrategy ..> PrismaClient : user create/check
+  EmailSignInStrategy ..> PrismaClient : user credential lookup
+  GoogleOAuthStrategy ..> PrismaClient : oauth user upsert
   DiscoveryService ..> PrismaClient : swipes and profile join
   MatchesService ..> PrismaClient : match and conversation join
   MatchingService ..> PrismaClient : profile and preference reads
@@ -187,15 +201,21 @@ classDiagram
   UsersService ..> PrismaClient : get-or-create user
 ```
 
-## 4. Class-First Contract Implemented
+## 4. Module Contract Implemented
 
-Every refactored area uses this compatibility-safe shape:
+Most refactored backend/frontend areas use this compatibility-safe shape:
 
 1. `export class X... { ... }` contains the logic.
 2. A module singleton is instantiated: `const x = new X...()`.
 3. Existing named exports remain and delegate to singleton methods.
 
-This preserves import compatibility for routes and UI code.
+Auth is the explicit exception after the latest refactor:
+
+1. `auth.controller.ts` now exports direct route-handler functions.
+2. `auth.service.ts` now exports direct service functions.
+3. Auth object creation is centralized through explicit factory classes (`AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, `DefaultOAuthAuthorizationStrategyFactory`).
+
+This preserves route and frontend API compatibility while removing auth service/controller singleton instances.
 
 ## 5. Complete Class Inventory (What Exists Today)
 
@@ -203,12 +223,16 @@ This preserves import compatibility for routes and UI code.
 
 ### Auth
 
-- `AuthController` in `backend/src/modules/auth/auth.controller.ts`
-- `AuthService` in `backend/src/modules/auth/auth.service.ts`
+- Direct handler functions in `backend/src/modules/auth/auth.controller.ts` (no `AuthController` class)
 - `EmailAuthStrategy` (interface) in `backend/src/modules/auth/auth.service.ts`
 - `EmailSignUpStrategy` in `backend/src/modules/auth/auth.service.ts`
 - `EmailSignInStrategy` in `backend/src/modules/auth/auth.service.ts`
+- `EmailAuthStrategyFactory` (interface) in `backend/src/modules/auth/auth.service.ts`
+- `DefaultEmailAuthStrategyFactory` in `backend/src/modules/auth/auth.service.ts`
 - `OAuthAuthorizationStrategy` (interface) in `backend/src/modules/auth/auth.service.ts`
+- `OAuthAuthorizationStrategyFactory` (interface) in `backend/src/modules/auth/auth.service.ts`
+- `DefaultOAuthAuthorizationStrategyFactory` in `backend/src/modules/auth/auth.service.ts`
+- `AuthStrategyFactory` in `backend/src/modules/auth/auth.service.ts`
 - `GoogleOAuthStrategy` in `backend/src/modules/auth/auth.service.ts`
 
 ### Discovery
@@ -273,6 +297,11 @@ Below is the exact status for the patterns you specifically listed.
 
 Status: Implemented extensively.
 
+Auth module exception:
+
+- Auth no longer uses module singleton service/controller instances after refactor.
+- Auth now uses direct exported functions plus factory-driven object creation.
+
 Evidence pattern used:
 
 1. Module-level class instance.
@@ -280,8 +309,7 @@ Evidence pattern used:
 
 Backend examples:
 
-- `const authController = new AuthController()` + wrappers in `backend/src/modules/auth/auth.controller.ts`
-- `const authService = new AuthService()` + wrappers in `backend/src/modules/auth/auth.service.ts`
+- Auth deliberately avoids this shape in current code.
 - Same shape repeated in:
   - `backend/src/modules/discovery/discovery.service.ts`
   - `backend/src/modules/matches/matches.service.ts`
@@ -309,16 +337,17 @@ Trade-offs:
 
 ## 6.2 Creational: Factory
 
-Status: Implemented in auth via GoF-style Factory Method on `AuthService`.
+Status: Implemented in auth via explicit factory classes and strategy interfaces.
 
 Concrete evidence:
 
-- `AuthService.createEmailAuthStrategy(intent)` returns `EmailSignUpStrategy` or `EmailSignInStrategy` through the `EmailAuthStrategy` interface in `backend/src/modules/auth/auth.service.ts`.
-- `AuthService.createOAuthAuthorizationStrategy(provider)` returns `GoogleOAuthStrategy` through the `OAuthAuthorizationStrategy` interface in `backend/src/modules/auth/auth.service.ts`.
+- `AuthStrategyFactory` composes `EmailAuthStrategyFactory` and `OAuthAuthorizationStrategyFactory` in `backend/src/modules/auth/auth.service.ts`.
+- `DefaultEmailAuthStrategyFactory` creates `EmailSignUpStrategy` or `EmailSignInStrategy` through `EmailAuthStrategy` in `backend/src/modules/auth/auth.service.ts`.
+- `DefaultOAuthAuthorizationStrategyFactory` creates `GoogleOAuthStrategy` through `OAuthAuthorizationStrategy` in `backend/src/modules/auth/auth.service.ts`.
 
-Why this is Factory Method:
+Why this is a practical factory pattern for current scope:
 
-- Product creation/selection is centralized in creator methods.
+- Product creation/selection is centralized in dedicated factory classes.
 - Callers (`signUpWithEmail`, `signInWithEmail`, `getGoogleAuthorizationUrl`, `completeGoogleAuthorization`, `consumeGoogleExchangeCode`) operate against product interfaces, not concrete classes.
 
 Remaining gap:
@@ -449,7 +478,7 @@ Evidence:
 
 Examples:
 
-- `AuthController` orchestrates request parsing, error mapping, and auth service delegation.
+- Auth controller handlers (`backend/src/modules/auth/auth.controller.ts`) orchestrate request parsing, error mapping, and auth service delegation.
 - `DiscoveryService` orchestrates swipes, matching lookup, and enrichment.
 - `CloudinaryService` orchestrates signed/unsigned upload flows.
 
@@ -459,9 +488,12 @@ Examples:
 
 Strongly applied:
 
-- Controller/Service split per module:
+- Controller/Service split per most modules:
   - `backend/src/modules/*/*.controller.ts`
   - `backend/src/modules/*/*.service.ts`
+- Auth exception:
+  - `backend/src/modules/auth/auth.controller.ts` is now function-based handlers (no controller class).
+  - `backend/src/modules/auth/auth.service.ts` is now function exports + explicit factory classes.
 - Transport layer separation from React components:
   - `frontend/src/services/*.transport.ts`
 
@@ -472,7 +504,7 @@ Applied examples:
 
 Trade-off areas:
 
-- `AuthService` in `backend/src/modules/auth/auth.service.ts` now delegates credential and OAuth flows through strategy products, but still owns orchestration and factory selection.
+- `GoogleOAuthStrategy` in `backend/src/modules/auth/auth.service.ts` still combines token exchange, profile fetch, and user upsert orchestration.
 - `MatchesService.getMyMatches` in `backend/src/modules/matches/matches.service.ts` combines query, enrichment, compatibility join, and tag generation.
 - `DiscoveryService` in `backend/src/modules/discovery/discovery.service.ts` handles both feed composition and swipe mutation.
 
@@ -485,7 +517,7 @@ Strongly applied:
 
 Trade-off areas:
 
-- Error mapping switch in `AuthController.getErrorStatus` (`backend/src/modules/auth/auth.controller.ts`) must be edited for new domain error codes.
+- Error mapping switch in auth controller (`backend/src/modules/auth/auth.controller.ts`) must be edited for new domain error codes.
 - Hardcoded tag generation logic in:
   - `DiscoveryService.generateTags` (`backend/src/modules/discovery/discovery.service.ts`)
   - `MatchesService.generateMatchTags` (`backend/src/modules/matches/matches.service.ts`)
@@ -495,7 +527,9 @@ Trade-off areas:
 Applied:
 
 - `ProfileUpsertService` and `PreferenceUpsertService` substitute safely for `UpsertByUserIdService` contract.
-- Strategy implementations satisfy their interface contracts in matching and auth continuation.
+- Matching strategies substitute safely for their strategy contracts.
+- Auth strategies/factories substitute safely for auth strategy contracts.
+- Frontend auth-continuation strategies substitute for `AuthContinuationStrategy` contract.
 
 Evidence files:
 
@@ -503,7 +537,26 @@ Evidence files:
 - `backend/src/modules/profiles/profiles.service.ts`
 - `backend/src/modules/preferences/preferences.service.ts`
 - `backend/src/modules/matching/matching.service.ts`
+- `backend/src/modules/auth/auth.service.ts`
 - `frontend/src/features/auth/authContinuationResolver.ts`
+
+Concrete backend LSP anchors:
+
+- Template base contract in `UpsertByUserIdService` is fulfilled by both concrete subclasses:
+  - `ProfileUpsertService extends UpsertByUserIdService` in `backend/src/modules/profiles/profiles.service.ts`
+  - `PreferenceUpsertService extends UpsertByUserIdService` in `backend/src/modules/preferences/preferences.service.ts`
+- Matching substitution points:
+  - `DefaultEligibilityStrategy implements EligibilityStrategy`
+  - `DefaultScoringStrategy implements ScoringStrategy`
+  - `MatchingService` depends on interface types in constructor.
+- Auth substitution points:
+  - `EmailSignUpStrategy` and `EmailSignInStrategy` implement `EmailAuthStrategy`
+  - `GoogleOAuthStrategy` implements `OAuthAuthorizationStrategy`
+  - Factory interfaces are fulfilled by default factory classes.
+
+Clarification boundary:
+
+- `chat.socket.ts` is primarily Observer/pub-sub wiring, not a primary LSP inheritance hotspot.
 
 ## 8.4 I: Interface Segregation Principle
 
@@ -552,9 +605,9 @@ This is pragmatic DIP, not pure DIP.
 ### 9.1 Backend module map
 
 - `backend/src/modules/auth/auth.controller.ts`:
-  - Class facade, singleton wrapper, error mapping strategy via switch, OAuth callback orchestration.
+  - Function-based route handlers, request validation, error mapping, OAuth callback redirection orchestration.
 - `backend/src/modules/auth/auth.service.ts`:
-  - Class singleton using Factory Method (`createEmailAuthStrategy`, `createOAuthAuthorizationStrategy`) with concrete strategy products.
+  - Factory-driven strategy creation using `AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, and `DefaultOAuthAuthorizationStrategyFactory`.
 - `backend/src/modules/discovery/discovery.controller.ts`:
   - Class facade, input normalization (`superlike`/`skip`).
 - `backend/src/modules/discovery/discovery.service.ts`:
@@ -625,6 +678,10 @@ Routes still call wrapper exports, not direct class instances:
 - `backend/src/modules/chat/chat.routes.ts`
 - `backend/src/modules/users.routes.ts`
 
+Auth note:
+
+- Auth now uses direct function exports from `auth.controller.ts` and `auth.service.ts` instead of class-singleton wrappers.
+
 ## 11. Test Evidence Anchoring Implemented Behavior
 
 Pattern-behavior-backed tests include:
@@ -642,23 +699,29 @@ Pattern-behavior-backed tests include:
 - Frontend adapter endpoint contracts:
   - `frontend/src/services/transports.test.ts`
 
+Current testing gap note:
+
+- There is currently no dedicated `backend/src/modules/auth/auth.service.test.ts`; auth confidence is mostly route/integration-behavior based.
+
 ## 12. Teacher Viva Quick Answers (Direct)
 
 ### Q1: Which system design classes did you create/apply?
 
 Answer:
 
-- Controller classes per module.
+- Controller classes for most modules; auth is now function-handler based.
 - Service classes per module.
 - Transport classes per frontend domain.
 - Strategy classes in matching, auth, and auth continuation.
+- Factory classes in auth (`AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, `DefaultOAuthAuthorizationStrategyFactory`).
 - Template base + concrete upsert subclasses.
 
 ### Q2: Where is Singleton applied?
 
 Answer:
 
-- Module singletons in nearly all service/controller/transport files.
+- Module singletons in many service/controller/transport files.
+- Auth module is intentionally non-singleton after refactor.
 - Lazy singleton chat socket in frontend.
 - Lazy singleton Prisma client in backend config.
 
@@ -666,9 +729,10 @@ Answer:
 
 Answer:
 
-- Auth uses GoF-style Factory Method in `backend/src/modules/auth/auth.service.ts`.
-- `createEmailAuthStrategy(intent)` returns `EmailSignUpStrategy` or `EmailSignInStrategy` via `EmailAuthStrategy`.
-- `createOAuthAuthorizationStrategy(provider)` returns `GoogleOAuthStrategy` via `OAuthAuthorizationStrategy`.
+- Auth uses explicit factory classes in `backend/src/modules/auth/auth.service.ts`.
+- `DefaultEmailAuthStrategyFactory` creates `EmailSignUpStrategy` or `EmailSignInStrategy` via `EmailAuthStrategy`.
+- `DefaultOAuthAuthorizationStrategyFactory` creates `GoogleOAuthStrategy` via `OAuthAuthorizationStrategy`.
+- `AuthStrategyFactory` composes both factory interfaces and is used by exported auth service functions.
 - Simple factory function style also exists in `getPrismaClient` and `withAuthenticatedController`.
 
 ### Q4: Where is Composite applied?
@@ -695,6 +759,7 @@ Answer:
 Answer:
 
 - Matching eligibility/scoring strategies.
+- Auth email and OAuth strategies selected through auth factories.
 - API request strategy.
 - Auth continuation strategies.
 
@@ -753,3 +818,78 @@ Not explicitly implemented in domain code:
 - Composite
 
 This is the current, source-verified status of the Flately architecture.
+
+## 16. Recent Clarification Addendum (2026-04-14)
+
+### 16.1 Auth pattern correctness verdict
+
+Result:
+
+- Auth refactor is correct for current goals.
+- Strategy + Factory are applied with compatibility-safe exported functions.
+- Route/controller external contracts remain unchanged.
+
+What this means practically:
+
+- Signup/signin/OAuth flows are separated by strategy role.
+- Construction/selection is centralized in explicit factory classes.
+- Call sites depend on interfaces and exported function contracts rather than concrete auth classes.
+
+### 16.2 Auth trade-offs (current state)
+
+1. In-memory OAuth state/exchange stores:
+  - Works well on a single process.
+  - Not ideal for multi-instance deployments because state is not shared across instances.
+2. Factory creation on each exported auth call:
+  - Simple and explicit.
+  - Introduces minor object churn.
+3. Test coverage gap:
+  - No dedicated auth service test file yet.
+
+### 16.3 Controller-chain middleware role split
+
+File:
+- `backend/src/middlewares/controller-chain.middleware.ts`
+
+Role definitions:
+
+1. Auth guard role:
+  - `requireAuthenticatedUser(...)` checks `req.userId` and returns `401` when missing.
+2. Domain error mapper role:
+  - `domainErrorToHttp(...)` maps domain codes (for example `ONBOARDING_REQUIRED`) to configured HTTP responses.
+3. Chain composition role:
+  - `withAuthenticatedController(...)` composes guard -> controller -> error mapper.
+
+### 16.4 Type inventory update
+
+Backend type cleanup applied:
+
+- Removed unused `backend/src/types/api.ts`.
+- Removed unused `backend/src/types/database.ts`.
+- Active backend shared type files are now `backend/src/types/auth.ts` and `backend/src/types/socket.ts`.
+
+### 16.5 In-progress auth and class diagram review
+
+Reviewed artifacts:
+
+- `backend/src/modules/auth/auth.controller.ts`
+- `backend/src/modules/auth/auth.routes.ts`
+- `backend/src/modules/auth/auth.service.ts`
+- `docs/diagrams/01-class-diagram.mmd`
+
+Review result:
+
+- No blocking implementation mismatch was found between auth source and the updated class diagram.
+- Backend typecheck passed with the in-progress auth changes.
+
+Auth review notes:
+
+1. Controller refactor to direct function exports preserves endpoint behavior while removing controller singleton wrapping.
+2. Service refactor correctly models Strategy + Factory via `DefaultEmailAuthStrategyFactory`, `DefaultOAuthAuthorizationStrategyFactory`, and `AuthStrategyFactory`.
+3. Shared in-memory OAuth state/exchange Maps remain a known scaling trade-off for multi-instance deployments.
+
+Diagram review notes:
+
+1. Diagram now reflects the actual auth model (factory-based strategy creation) and removes obsolete auth class nodes.
+2. Strategy-to-Prisma dependency edges were updated to concrete auth strategy classes, matching current persistence ownership.
+3. Diagram structure remains quality-compliant for class diagrams (explicit direction, labeled relation intent, no placeholder nodes).
