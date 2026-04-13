@@ -1,485 +1,610 @@
-# Flately Class-First System Design Study Guide
+# Flately Canonical System Design + SOLID Dossier
 
-## 1. Purpose
+## 1. Document Contract
 
-This document explains the class-first refactor applied across backend service/controller layers and frontend transport layers.
+This is the single source-of-truth study document for the current Flately codebase implementation.
 
-Goals achieved:
+This file is intentionally long and evidence-driven because oral exam questions can target:
 
-- Introduce real classes so architecture and diagrams reflect actual runtime types.
+1. Which classes were created and why.
+2. Which design patterns are actually implemented.
+3. Which requested patterns are not implemented.
+4. Where SOLID is applied in concrete files.
+5. What trade-offs were made.
 
-- Preserve route and call-site compatibility through exported function wrappers.
+No claim in this document should be interpreted as architecture intent unless it is visible in source code.
 
-- Keep behavior stable while improving design-pattern clarity and extensibility.
+## 2. Step-by-Step Context Gathering Method Used
 
-## 2. Refactor Strategy
+To avoid hallucination, context was gathered in the following order:
 
-### 2.1 Compatibility-First Rule
+1. Loaded all mandatory pattern workflow instructions and pattern skills.
+2. Enumerated backend and frontend module files.
+3. Read all relevant service/controller/route/transport/middleware files directly.
+4. Verified class declarations, singleton wrappers, strategy/template types, and socket events from source.
+5. Cross-checked with tests where behavior contracts are asserted.
 
-Every refactored module follows the same migration shape:
+## 3. System Composition Roots (How the App Is Wired)
 
-1. Create a class (`XService`, `XController`, or `XTransport`) containing core logic.
+### 3.1 Backend runtime composition
 
-2. Create a module-level singleton instance.
+- `backend/src/server.ts`:
+  - Creates HTTP server from Express app.
+  - Creates Socket.IO server.
+  - Registers chat socket handlers via `registerChatSocket(io)`.
+- `backend/src/app.ts`:
+  - Applies security middleware (`helmet`, `cors`, `rateLimit`, `express.json`).
+  - Mounts module routers: `/auth`, `/uploads`, `/matching`, `/profiles`, `/discovery`, `/users`, `/matches`, `/chat`, `/preferences`.
 
-3. Keep original named exports as thin wrappers delegating to the singleton.
+### 3.2 Frontend runtime composition
 
-This keeps current imports valid, including route wiring and test expectations.
+- `frontend/src/main.tsx`:
+  - Wraps app with Redux `Provider`, `AuthProvider`, and `AuthBootstrap`.
+  - Mounts RouterProvider.
+- `frontend/src/app/router.tsx`:
+  - Declares all routes including `/auth/callback` -> `GoogleAuthCallbackPage`.
+  - Wraps app routes with `ProtectedRoute` as needed.
 
-### 2.2 Why This Is Safe
+## 4. Class-First Contract Implemented
 
-- Route modules still import the same function names.
+Every refactored area uses this compatibility-safe shape:
 
-- Frontend code still imports the same transport function names.
+1. `export class X... { ... }` contains the logic.
+2. A module singleton is instantiated: `const x = new X...()`.
+3. Existing named exports remain and delegate to singleton methods.
 
-- Existing tests asserting endpoint/url contracts continue to pass unchanged.
+This preserves import compatibility for routes and UI code.
 
-## 3. Design Patterns Applied
+## 5. Complete Class Inventory (What Exists Today)
 
-## 3.1 Facade (Primary)
+## 5.1 Backend classes
 
-Each controller/service/transport class acts as a facade over lower-level operations.
+### Auth
+
+- `AuthController` in `backend/src/modules/auth/auth.controller.ts`
+- `AuthService` in `backend/src/modules/auth/auth.service.ts`
+
+### Discovery
+
+- `DiscoveryController` in `backend/src/modules/discovery/discovery.controller.ts`
+- `DiscoveryService` in `backend/src/modules/discovery/discovery.service.ts`
+
+### Matches + Matching
+
+- `MatchesController` in `backend/src/modules/matches/matches.controller.ts`
+- `MatchesService` in `backend/src/modules/matches/matches.service.ts`
+- `MatchingController` in `backend/src/modules/matching/matching.controller.ts`
+- `MatchingService` in `backend/src/modules/matching/matching.service.ts`
+- `DefaultEligibilityStrategy` in `backend/src/modules/matching/matching.service.ts`
+- `DefaultScoringStrategy` in `backend/src/modules/matching/matching.service.ts`
+
+### Profiles + Preferences + Shared Template
+
+- `ProfilesController` in `backend/src/modules/profiles/profiles.controller.ts`
+- `ProfileService` in `backend/src/modules/profiles/profiles.service.ts`
+- `ProfileUpsertService` in `backend/src/modules/profiles/profiles.service.ts`
+- `PreferencesController` in `backend/src/modules/preferences/preferences.controller.ts`
+- `PreferencesService` in `backend/src/modules/preferences/preferences.service.ts`
+- `PreferenceUpsertService` in `backend/src/modules/preferences/preferences.service.ts`
+- `UpsertByUserIdService` (abstract) in `backend/src/modules/shared/upsert-by-user-id.service.ts`
+
+### Chat, Uploads, Users
+
+- `ChatController` in `backend/src/modules/chat/chat.controller.ts`
+- `ChatService` in `backend/src/modules/chat/chat.service.ts`
+- `UploadsController` in `backend/src/modules/uploads/uploads.controller.ts`
+- `UploadsService` in `backend/src/modules/uploads/uploads.service.ts`
+- `UsersController` in `backend/src/modules/users.controllers.ts`
+- `UsersService` in `backend/src/modules/users.service.ts`
+
+## 5.2 Frontend classes
+
+### Transport + API
+
+- `AuthTransport` in `frontend/src/services/auth.transport.ts`
+- `DiscoveryTransport` in `frontend/src/services/discovery.transport.ts`
+- `MatchesTransport` in `frontend/src/services/matches.transport.ts`
+- `ProfileTransport` in `frontend/src/services/profile.transport.ts`
+- `PreferencesTransport` in `frontend/src/services/preferences.transport.ts`
+- `ChatTransport` in `frontend/src/services/chat.transport.ts`
+- `CloudinaryService` in `frontend/src/services/cloudinary.ts`
+- `ApiError` in `frontend/src/services/api.ts`
+- `FetchRequestStrategy` in `frontend/src/services/api.ts`
+- `HttpClientAdapter` in `frontend/src/services/api.ts`
+
+### Frontend strategy classes
+
+- `QuestionnaireSourceStrategy` in `frontend/src/features/auth/authContinuationResolver.ts`
+- `SignupDefaultStrategy` in `frontend/src/features/auth/authContinuationResolver.ts`
+- `DefaultAppStrategy` in `frontend/src/features/auth/authContinuationResolver.ts`
+
+## 6. Pattern Analysis (Requested Patterns)
+
+Below is the exact status for the patterns you specifically listed.
+
+## 6.1 Creational: Singleton
+
+Status: Implemented extensively.
+
+Evidence pattern used:
+
+1. Module-level class instance.
+2. Exported wrapper functions delegate to that instance.
+
+Backend examples:
+
+- `const authController = new AuthController()` + wrappers in `backend/src/modules/auth/auth.controller.ts`
+- `const authService = new AuthService()` + wrappers in `backend/src/modules/auth/auth.service.ts`
+- Same shape repeated in:
+  - `backend/src/modules/discovery/discovery.service.ts`
+  - `backend/src/modules/matches/matches.service.ts`
+  - `backend/src/modules/matching/matching.service.ts`
+  - `backend/src/modules/profiles/profiles.service.ts`
+  - `backend/src/modules/preferences/preferences.service.ts`
+  - `backend/src/modules/chat/chat.service.ts`
+  - `backend/src/modules/uploads/uploads.service.ts`
+  - `backend/src/modules/users.service.ts`
+
+Frontend examples:
+
+- `const authTransport = new AuthTransport()` in `frontend/src/services/auth.transport.ts`
+- `const matchesTransport = new MatchesTransport()` in `frontend/src/services/matches.transport.ts`
+- `const discoveryTransport = new DiscoveryTransport()` in `frontend/src/services/discovery.transport.ts`
+- `const chatTransport = new ChatTransport()` in `frontend/src/services/chat.transport.ts`
+- `const cloudinaryService = new CloudinaryService()` in `frontend/src/services/cloudinary.ts`
+- `export const apiClient = new HttpClientAdapter(...)` in `frontend/src/services/api.ts`
+- `getChatSocket()` lazy singleton socket in `frontend/src/features/chat/chat.socket.ts`
+
+Trade-offs:
+
+- Pros: stable imports, low ceremony, migration-safe.
+- Cons: implicit global state, harder isolated testing, weaker lifecycle control compared to explicit DI container wiring.
+
+## 6.2 Creational: Factory
+
+Status: Partially present as simple factory functions, not a full GoF class-based Factory Method/Abstract Factory hierarchy.
+
+Concrete simple-factory evidence:
+
+- `getPrismaClient()` in `backend/src/config/prisma.ts` creates/returns a single `PrismaClient` lazily.
+- `withAuthenticatedController(...)` in `backend/src/middlewares/controller-chain.middleware.ts` constructs and returns a middleware chain array.
+
+What is not implemented:
+
+- No dedicated `Factory` class hierarchy for service/provider families.
+- No `AbstractFactory` for multi-provider auth (Google/Discord/GitHub families).
+
+Trade-off:
+
+- Current code keeps creation simple.
+- If provider families grow, a formal factory becomes useful.
+
+## 6.3 Structural: Composite
+
+Status: Not explicitly implemented in application domain code.
+
+Reason:
+
+- Current core domain flows (auth, matching, discovery, chat, profile, preferences) are not modeled as tree-composition structures requiring uniform leaf/composite treatment.
+
+Important exam-safe answer:
+
+- React itself uses composite component trees, but this repository does not define its own GoF Composite abstraction for domain objects.
+
+## 6.4 Structural: Adapter
+
+Status: Implemented strongly in frontend networking.
+
+Primary evidence:
+
+1. `RequestStrategy` contract in `frontend/src/services/api.ts`.
+2. `FetchRequestStrategy` adapts browser `fetch` into app request behavior.
+3. `HttpClientAdapter` adapts strategy + auth/error behavior into `apiRequest` interface.
+4. Transport classes adapt domain operations to endpoint contracts.
 
 Examples:
 
-- `AuthController` orchestrates request parsing, service calls, and error mapping.
+- `AuthTransport.exchangeGoogleAuthCode` -> `/auth/google/exchange`
+- `DiscoveryTransport.swipeDiscoveryUser` -> `/discovery/swipe`
+- `MatchesTransport.connectWithUser` -> `/matches/connect/:toUserId`
+- `ProfileTransport.saveMyProfile` -> `/profiles/me`
 
-- `DiscoveryService` orchestrates swipes, matching, profile/preference joining, and response shaping.
+Test-backed evidence:
 
-- `CloudinaryService` orchestrates signed/unsigned upload paths and fallback logic.
+- Endpoint contract assertions in `frontend/src/services/transports.test.ts`.
 
-## 3.2 Adapter
+## 6.5 Behavioural: Observer
 
-Frontend transport classes adapt domain calls to HTTP request contracts through `apiRequest`.
+Status: Implemented.
 
-Examples:
+Server-side observer/pub-sub:
 
-- `DiscoveryTransport.swipeDiscoveryUser(...)` -> `POST /discovery/swipe`
+- `backend/src/modules/chat/chat.socket.ts`
+  - Subscribes with `socket.on(...)`.
+  - Publishes with `io.to(...).emit(...)`.
 
-- `MatchesTransport.connectWithUser(...)` -> `POST /matches/connect/:toUserId`
+Client-side observer semantics:
 
-## 3.3 Strategy
+- `frontend/src/features/chat/chat.socket.ts` socket event reception.
+- Redux state subscriptions via selectors in:
+  - `frontend/src/features/auth/AuthProvider.tsx`
+  - `frontend/src/app/ProtectedRoute.tsx`
 
-Matching already used strategy classes and now remains explicit:
+Interpretation:
 
-- `DefaultEligibilityStrategy`
+- Chat realtime flow is direct publish-subscribe observer behavior.
 
-- `DefaultScoringStrategy`
+## 6.6 Behavioural: Strategy
 
-These are composed by `MatchingService`.
+Status: Implemented in multiple places.
 
-## 3.4 Template Method
+Backend algorithm strategy:
 
-Shared upsert behavior remains in:
+- `EligibilityStrategy` + `DefaultEligibilityStrategy` in `backend/src/modules/matching/matching.service.ts`
+- `ScoringStrategy` + `DefaultScoringStrategy` in `backend/src/modules/matching/matching.service.ts`
+- Injected into `MatchingService` constructor.
 
-- `UpsertByUserIdService`
+Frontend request strategy:
+
+- `RequestStrategy` + `FetchRequestStrategy` in `frontend/src/services/api.ts`
+- Used by `HttpClientAdapter`.
+
+Frontend auth continuation strategy:
+
+- `AuthContinuationStrategy` in `frontend/src/features/auth/authContinuationResolver.ts`
+- Concrete strategies:
+  - `QuestionnaireSourceStrategy`
+  - `SignupDefaultStrategy`
+  - `DefaultAppStrategy`
+
+## 6.7 Behavioural: Template Method
+
+Status: Implemented clearly.
+
+Template base class:
+
+- `UpsertByUserIdService` in `backend/src/modules/shared/upsert-by-user-id.service.ts`
+  - Defines invariant algorithm in `upsert(...)`.
+  - Delegates variable steps to abstract methods.
 
 Concrete implementations:
 
-- `ProfileUpsertService`
+- `ProfileUpsertService` in `backend/src/modules/profiles/profiles.service.ts`
+- `PreferenceUpsertService` in `backend/src/modules/preferences/preferences.service.ts`
 
-- `PreferenceUpsertService`
-
-## 3.5 Dependency Injection (Lightweight)
-
-Services that coordinate other services accept injectable dependencies with defaults.
-
-Examples:
-
-- `DiscoveryService` receives `checkAndCreateMatch`, `assertOnboardingCompleted`, and `findMatchesForUser`.
-
-- `MatchesService` receives `findMatchesForUser`.
-
-This improves testability while preserving runtime defaults.
-
-## 4. Class-First Layer Model
-
-```mermaid
-classDiagram
-  class AuthController
-  class AuthService
-
-  class DiscoveryController
-  class DiscoveryService
-
-  class MatchesController
-  class MatchesService
-
-  class MatchingController
-  class MatchingService
-  class DefaultEligibilityStrategy
-  class DefaultScoringStrategy
-
-  class ProfilesController
-  class ProfileService
-  class ProfileUpsertService
-  class UpsertByUserIdService
-
-  class PreferencesController
-  class PreferencesService
-  class PreferenceUpsertService
-
-  class ChatController
-  class ChatService
-
-  class UploadsController
-  class UploadsService
-
-  class UsersController
-  class UsersService
-
-  class AuthTransport
-  class DiscoveryTransport
-  class MatchesTransport
-  class ProfileTransport
-  class PreferencesTransport
-  class ChatTransport
-  class CloudinaryService
-
-  AuthController --> AuthService
-  DiscoveryController --> DiscoveryService
-  MatchesController --> MatchesService
-  MatchingController --> MatchingService
-  ProfilesController --> ProfileService
-  PreferencesController --> PreferencesService
-  ChatController --> ChatService
-  UploadsController --> UploadsService
-  UsersController --> UsersService
-
-  MatchingService --> DefaultEligibilityStrategy
-  MatchingService --> DefaultScoringStrategy
-
-  ProfileUpsertService --|> UpsertByUserIdService
-  PreferenceUpsertService --|> UpsertByUserIdService
-  ProfileService --> ProfileUpsertService
-  PreferencesService --> PreferenceUpsertService
-```
-
-## 5. Wrapper Contract Pattern
-
-## 5.1 Backend Wrapper Example
-
-```ts
-const discoveryService = new DiscoveryService()
-
-export async function getDiscoveryFeed(userId: string) {
-  return discoveryService.getDiscoveryFeed(userId)
-}
-```
-
-## 5.2 Frontend Wrapper Example
-
-```ts
-const matchesTransport = new MatchesTransport()
-
-export function getMyMatches(): Promise<Match[]> {
-  return matchesTransport.getMyMatches()
-}
-```
-
-These wrappers are intentionally minimal and preserve import compatibility.
-
-## 6. Request Flow (After Refactor)
-
-```mermaid
-sequenceDiagram
-  participant UI as Frontend UI
-  participant T as Transport Class
-  participant R as Express Route
-  participant C as Controller Class
-  participant S as Service Class
-  participant DB as Prisma/DB
-
-  UI->>T: call function wrapper
-  T->>T: delegate to class method
-  T->>R: HTTP request
-  R->>C: invoke exported controller wrapper
-  C->>C: validate/normalize request
-  C->>S: call service method
-  S->>DB: read/write data
-  DB-->>S: result
-  S-->>C: response DTO
-  C-->>R: HTTP response
-  R-->>T: JSON payload
-  T-->>UI: resolved promise
-```
-
-## 7. Detailed Module Notes
-
-## 7.1 Auth Module
-
-Files:
-
-- `backend/src/modules/auth/auth.controller.ts`
-
-- `backend/src/modules/auth/auth.service.ts`
-
-- `backend/src/modules/auth/auth.routes.ts`
-
-Highlights:
-
-- `AuthController` centralizes auth HTTP concerns.
-
-- `AuthService` owns credential login/signup and Google OAuth state/exchange lifecycle.
-
-- Wrapper exports keep route imports stable.
-
-## 7.2 Discovery Module
-
-Files:
-
-- `backend/src/modules/discovery/discovery.controller.ts`
-
-- `backend/src/modules/discovery/discovery.service.ts`
-
-- `backend/src/modules/discovery/discovery.routes.ts`
-
-Highlights:
-
-- `DiscoveryService` composes swipes + matching + profile/preference enrichment.
-
-- Normalization behavior (`superlike`/`skip`) is preserved.
-
-## 7.3 Matches + Matching Modules
-
-Files:
-
-- `backend/src/modules/matches/matches.controller.ts`
-
-- `backend/src/modules/matches/matches.service.ts`
-
-- `backend/src/modules/matches/matches.routes.ts`
-
-- `backend/src/modules/matching/matching.controller.ts`
-
-- `backend/src/modules/matching/matching.service.ts`
-
-- `backend/src/modules/matching/matching.routes.ts`
-
-Highlights:
-
-- `MatchesService` manages reciprocal-like match creation and enriched match listing.
-
-- `MatchingService` owns strategy-driven ranking and onboarding gate checks.
-
-- `findMatches` compatibility export remains available.
-
-## 7.4 Profiles + Preferences Modules
-
-Files:
-
-- `backend/src/modules/profiles/profiles.controller.ts`
-
-- `backend/src/modules/profiles/profiles.service.ts`
-
-- `backend/src/modules/profiles/profiles.routes.ts`
-
-- `backend/src/modules/preferences/preferences.controller.ts`
-
-- `backend/src/modules/preferences/preferences.service.ts`
-
-- `backend/src/modules/preferences/preferences.routes.ts`
-
-- `backend/src/modules/shared/upsert-by-user-id.service.ts`
-
-Highlights:
-
-- Service facades now wrap Template Method upsert classes.
-
-- Weight validation behavior in preferences is preserved.
-
-## 7.5 Chat Module
-
-Files:
-
-- `backend/src/modules/chat/chat.controller.ts`
-
-- `backend/src/modules/chat/chat.service.ts`
-
-- `backend/src/modules/chat/chat.routes.ts`
-
-- `backend/src/modules/chat/chat.socket.ts`
-
-Highlights:
-
-- `ChatService` encapsulates conversation/message primitives.
-
-- `ChatController` handles membership validation and open-chat payload assembly.
-
-## 7.6 Uploads + Users Modules
-
-Files:
-
-- `backend/src/modules/uploads/uploads.controller.ts`
-
-- `backend/src/modules/uploads/uploads.service.ts`
-
-- `backend/src/modules/uploads/uploads.routes.ts`
-
-- `backend/src/modules/users.controllers.ts`
-
-- `backend/src/modules/users.service.ts`
-
-- `backend/src/modules/users.routes.ts`
-
-Highlights:
-
-- `UploadsService` encapsulates Cloudinary signature generation internals.
-
-- `UsersService` encapsulates user lookup/create/update flow with uniqueness recovery.
-
-## 7.7 Frontend Transport Layer
-
-Files:
-
-- `frontend/src/services/auth.transport.ts`
-
-- `frontend/src/services/discovery.transport.ts`
-
-- `frontend/src/services/matches.transport.ts`
-
-- `frontend/src/services/profile.transport.ts`
-
-- `frontend/src/services/preferences.transport.ts`
-
-- `frontend/src/services/chat.transport.ts`
-
-- `frontend/src/services/cloudinary.ts`
-
-- `frontend/src/services/api.ts`
-
-Highlights:
-
-- Transport classes expose domain-friendly methods and keep old function exports.
-
-- Endpoint contracts remain stable and verified by tests.
-
-- `CloudinaryService` handles signed-first then unsigned fallback upload strategy.
-
-## 8. Full File Inventory (Service/Controller/Transport Scope)
-
-### 8.1 Backend modules
-
-- `backend/src/modules/auth/auth.controller.ts`
-
-- `backend/src/modules/auth/auth.routes.ts`
-
-- `backend/src/modules/auth/auth.service.ts`
-
-- `backend/src/modules/chat/chat.controller.ts`
-
-- `backend/src/modules/chat/chat.routes.ts`
-
-- `backend/src/modules/chat/chat.service.ts`
-
-- `backend/src/modules/chat/chat.socket.ts`
-
-- `backend/src/modules/discovery/discovery.controller.ts`
-
-- `backend/src/modules/discovery/discovery.routes.ts`
-
-- `backend/src/modules/discovery/discovery.service.test.ts`
-
-- `backend/src/modules/discovery/discovery.service.ts`
-
-- `backend/src/modules/matches/matches.controller.ts`
-
-- `backend/src/modules/matches/matches.routes.ts`
-
-- `backend/src/modules/matches/matches.service.test.ts`
-
-- `backend/src/modules/matches/matches.service.ts`
-
-- `backend/src/modules/matching/matching.controller.ts`
-
-- `backend/src/modules/matching/matching.routes.ts`
-
-- `backend/src/modules/matching/matching.service.test.ts`
-
-- `backend/src/modules/matching/matching.service.ts`
-
-- `backend/src/modules/preferences/preferences.controller.ts`
-
-- `backend/src/modules/preferences/preferences.routes.ts`
-
-- `backend/src/modules/preferences/preferences.service.test.ts`
-
-- `backend/src/modules/preferences/preferences.service.ts`
-
-- `backend/src/modules/profiles/profiles.controller.ts`
-
-- `backend/src/modules/profiles/profiles.routes.ts`
-
-- `backend/src/modules/profiles/profiles.service.ts`
+Test evidence:
 
 - `backend/src/modules/shared/upsert-by-user-id.service.test.ts`
 
+## 7. Additional Patterns Actually Present (Beyond Requested List)
+
+## 7.1 Proxy (real structural proxy)
+
+Status: Implemented.
+
+Evidence:
+
+- `backend/src/config/prisma.ts` exports `prisma` as `new Proxy({} as PrismaClient, ...)`.
+- Proxy lazily instantiates real `PrismaClient` on first property access.
+
+Why this matters:
+
+- This is a concrete, textbook proxy wrapper controlling access and initialization timing.
+
+## 7.2 Facade (service/controller/transport facades)
+
+Status: Implemented as architectural style.
+
+Evidence:
+
+- Controllers expose simplified HTTP entry points while hiding service internals.
+- Services aggregate lower-level persistence and policy operations.
+- Frontend transports expose domain methods instead of raw fetch calls.
+
+Examples:
+
+- `AuthController` orchestrates request parsing, error mapping, and auth service delegation.
+- `DiscoveryService` orchestrates swipes, matching lookup, and enrichment.
+- `CloudinaryService` orchestrates signed/unsigned upload flows.
+
+## 8. SOLID Principle Mapping (Where Applied and Trade-offs)
+
+## 8.1 S: Single Responsibility Principle
+
+Strongly applied:
+
+- Controller/Service split per module:
+  - `backend/src/modules/*/*.controller.ts`
+  - `backend/src/modules/*/*.service.ts`
+- Transport layer separation from React components:
+  - `frontend/src/services/*.transport.ts`
+
+Applied examples:
+
+- `ChatService` focuses on conversation/message persistence in `backend/src/modules/chat/chat.service.ts`.
+- `UploadsService` focuses on signature creation in `backend/src/modules/uploads/uploads.service.ts`.
+
+Trade-off areas:
+
+- `AuthService` in `backend/src/modules/auth/auth.service.ts` mixes password auth, OAuth state storage, token exchange, and session shaping.
+- `MatchesService.getMyMatches` in `backend/src/modules/matches/matches.service.ts` combines query, enrichment, compatibility join, and tag generation.
+- `DiscoveryService` in `backend/src/modules/discovery/discovery.service.ts` handles both feed composition and swipe mutation.
+
+## 8.2 O: Open/Closed Principle
+
+Strongly applied:
+
+- Matching strategies are open for extension without modifying `MatchingService` core flow.
+- Template method allows new upsert variants without changing base algorithm.
+
+Trade-off areas:
+
+- Error mapping switch in `AuthController.getErrorStatus` (`backend/src/modules/auth/auth.controller.ts`) must be edited for new domain error codes.
+- Hardcoded tag generation logic in:
+  - `DiscoveryService.generateTags` (`backend/src/modules/discovery/discovery.service.ts`)
+  - `MatchesService.generateMatchTags` (`backend/src/modules/matches/matches.service.ts`)
+
+## 8.3 L: Liskov Substitution Principle
+
+Applied:
+
+- `ProfileUpsertService` and `PreferenceUpsertService` substitute safely for `UpsertByUserIdService` contract.
+- Strategy implementations satisfy their interface contracts in matching and auth continuation.
+
+Evidence files:
+
 - `backend/src/modules/shared/upsert-by-user-id.service.ts`
+- `backend/src/modules/profiles/profiles.service.ts`
+- `backend/src/modules/preferences/preferences.service.ts`
+- `backend/src/modules/matching/matching.service.ts`
+- `frontend/src/features/auth/authContinuationResolver.ts`
 
-- `backend/src/modules/uploads/uploads.controller.ts`
+## 8.4 I: Interface Segregation Principle
 
-- `backend/src/modules/uploads/uploads.routes.ts`
+Applied:
 
-- `backend/src/modules/uploads/uploads.service.ts`
+- Small focused interfaces:
+  - `EligibilityStrategy`
+  - `ScoringStrategy`
+  - `RequestStrategy`
+  - `AuthContinuationStrategy`
 
-- `backend/src/modules/users.controllers.ts`
+Evidence files:
 
-- `backend/src/modules/users.routes.ts`
+- `backend/src/modules/matching/matching.service.ts`
+- `frontend/src/services/api.ts`
+- `frontend/src/features/auth/authContinuationResolver.ts`
 
-- `backend/src/modules/users.service.ts`
+Trade-off:
 
-### 8.2 Frontend services
+- `DiscoveryServiceDependencies` bundles three dependencies in one object; still workable, but not maximally granular.
 
+## 8.5 D: Dependency Inversion Principle
+
+Applied:
+
+- Strategy injection into `MatchingService`.
+- Request strategy injection into `HttpClientAdapter`.
+- Dependency injection bags in `DiscoveryService` and `MatchesService`.
+
+Evidence files:
+
+- `backend/src/modules/matching/matching.service.ts`
+- `backend/src/modules/discovery/discovery.service.ts`
+- `backend/src/modules/matches/matches.service.ts`
 - `frontend/src/services/api.ts`
 
-- `frontend/src/services/auth.transport.ts`
+Trade-off areas:
 
-- `frontend/src/services/chat.transport.ts`
+- Most services still depend directly on concrete Prisma client import (`import prisma from ...`).
+- Controllers depend on concrete service wrapper exports.
 
-- `frontend/src/services/cloudinary.ts`
+This is pragmatic DIP, not pure DIP.
 
-- `frontend/src/services/discovery.transport.ts`
+## 9. File-by-File Pattern Map
 
-- `frontend/src/services/matches.transport.ts`
+### 9.1 Backend module map
 
-- `frontend/src/services/preferences.transport.ts`
+- `backend/src/modules/auth/auth.controller.ts`:
+  - Class facade, singleton wrapper, error mapping strategy via switch, OAuth callback orchestration.
+- `backend/src/modules/auth/auth.service.ts`:
+  - Class singleton, auth domain logic, in-memory OAuth state/exchange maps.
+- `backend/src/modules/discovery/discovery.controller.ts`:
+  - Class facade, input normalization (`superlike`/`skip`).
+- `backend/src/modules/discovery/discovery.service.ts`:
+  - Class singleton, dependency injection bag, feed enrichment, tag generation.
+- `backend/src/modules/matches/matches.controller.ts`:
+  - Class facade with connect operation using discovery swipe.
+- `backend/src/modules/matches/matches.service.ts`:
+  - Class singleton, match creation + enrichment.
+- `backend/src/modules/matching/matching.service.ts`:
+  - Strategy interfaces + implementations + service injection.
+- `backend/src/modules/profiles/profiles.service.ts`:
+  - Template method concrete subclass + service facade.
+- `backend/src/modules/preferences/preferences.service.ts`:
+  - Template method concrete subclass + validation.
+- `backend/src/modules/shared/upsert-by-user-id.service.ts`:
+  - Template method base abstraction.
+- `backend/src/modules/chat/chat.socket.ts`:
+  - Observer/pub-sub event wiring.
+- `backend/src/config/prisma.ts`:
+  - Lazy singleton + Proxy pattern.
 
-- `frontend/src/services/profile.transport.ts`
+### 9.2 Frontend module map
 
-- `frontend/src/services/transports.test.ts`
+- `frontend/src/services/api.ts`:
+  - Adapter + strategy + client facade.
+- `frontend/src/services/*.transport.ts`:
+  - Class-based adapters from domain calls to REST endpoints.
+- `frontend/src/services/cloudinary.ts`:
+  - Class singleton with signed/unsigned fallback orchestration.
+- `frontend/src/features/auth/authContinuationResolver.ts`:
+  - Strategy chain for post-auth routing.
+- `frontend/src/features/chat/chat.socket.ts`:
+  - Singleton socket accessor.
+- `frontend/src/features/auth/AuthProvider.tsx`:
+  - Observer-style state reaction with effects and store dispatch.
 
-## 9. Verification Evidence
+## 10. Compatibility Wrapper Evidence
 
-Executed after refactor:
+Representative backend shape:
 
-- Backend typecheck: `npm run typecheck` (pass)
+```ts
+const service = new SomeService()
 
-- Backend tests: `npm test` (pass)
+export async function legacyFunction(args) {
+  return service.legacyFunction(args)
+}
+```
 
-- Frontend typecheck: `npm run typecheck` (pass)
+Representative frontend shape:
 
-- Frontend transport contracts: `npm test -- src/services/transports.test.ts` (pass)
+```ts
+const transport = new SomeTransport()
 
-## 10. Study Checklist
+export function legacyApiCall(args) {
+  return transport.legacyApiCall(args)
+}
+```
 
-Use this checklist when reviewing the refactor:
+Routes still call wrapper exports, not direct class instances:
 
-- Confirm each module has a concrete class + singleton + wrapper exports.
+- `backend/src/modules/auth/auth.routes.ts`
+- `backend/src/modules/discovery/discovery.routes.ts`
+- `backend/src/modules/matches/matches.routes.ts`
+- `backend/src/modules/matching/matching.routes.ts`
+- `backend/src/modules/profiles/profiles.routes.ts`
+- `backend/src/modules/preferences/preferences.routes.ts`
+- `backend/src/modules/uploads/uploads.routes.ts`
+- `backend/src/modules/chat/chat.routes.ts`
+- `backend/src/modules/users.routes.ts`
 
-- Confirm routes still import original function names.
+## 11. Test Evidence Anchoring Implemented Behavior
 
-- Confirm transport tests still pass with unchanged endpoint calls.
+Pattern-behavior-backed tests include:
 
-- Confirm strategy/template classes remain explicit and discoverable.
+- Template behavior:
+  - `backend/src/modules/shared/upsert-by-user-id.service.test.ts`
+- Strategy and matching behavior:
+  - `backend/src/modules/matching/matching.service.test.ts`
+- Discovery orchestration behavior:
+  - `backend/src/modules/discovery/discovery.service.test.ts`
+- Match enrichment behavior:
+  - `backend/src/modules/matches/matches.service.test.ts`
+- Preference validation behavior:
+  - `backend/src/modules/preferences/preferences.service.test.ts`
+- Frontend adapter endpoint contracts:
+  - `frontend/src/services/transports.test.ts`
 
-- Confirm no behavior changes in normalization, validation, or error mapping.
+## 12. Teacher Viva Quick Answers (Direct)
 
-## 11. Future Increment Path
+### Q1: Which system design classes did you create/apply?
 
-If you decide to remove wrappers later, do it in phases:
+Answer:
 
-1. Migrate imports to class instances via explicit composition root wiring.
+- Controller classes per module.
+- Service classes per module.
+- Transport classes per frontend domain.
+- Strategy classes in matching and auth continuation.
+- Template base + concrete upsert subclasses.
 
-2. Keep wrappers with deprecation notices for one release.
+### Q2: Where is Singleton applied?
 
-3. Remove wrappers only after route and call-site migration is complete.
+Answer:
+
+- Module singletons in nearly all service/controller/transport files.
+- Lazy singleton chat socket in frontend.
+- Lazy singleton Prisma client in backend config.
+
+### Q3: Where is Factory applied?
+
+Answer:
+
+- Simple factory function style exists (`getPrismaClient`, `withAuthenticatedController`).
+- Full GoF Factory class hierarchy is not currently implemented.
+
+### Q4: Where is Composite applied?
+
+Answer:
+
+- No explicit custom Composite in domain code.
+
+### Q5: Where is Adapter applied?
+
+Answer:
+
+- `frontend/src/services/api.ts` and all `*.transport.ts` files.
+
+### Q6: Where is Observer applied?
+
+Answer:
+
+- Socket pub-sub in `backend/src/modules/chat/chat.socket.ts`.
+- Client socket + Redux subscription behavior in frontend auth/chat flows.
+
+### Q7: Where is Strategy applied?
+
+Answer:
+
+- Matching eligibility/scoring strategies.
+- API request strategy.
+- Auth continuation strategies.
+
+### Q8: Where is Template applied?
+
+Answer:
+
+- `UpsertByUserIdService` base + profile/preferences subclasses.
+
+### Q9: Where is SOLID applied most clearly?
+
+Answer:
+
+- S: module controller/service split.
+- O/L: strategy and template extension points.
+- I: focused interfaces in matching/api/auth continuation.
+- D: constructor-injected strategy/dependency bags.
+
+### Q10: What are current architecture trade-offs?
+
+Answer:
+
+- Strong compatibility and low migration risk.
+- Weaker pure DIP due direct Prisma imports and singleton globals.
+- Some multi-responsibility service methods remain for pragmatic delivery speed.
+
+## 13. Honest Gap Register
+
+1. No full GoF Factory hierarchy yet.
+2. No custom Composite domain abstraction yet.
+3. DIP is partial, not strict, because persistence is concrete-coupled to Prisma.
+4. Some services remain large and can be decomposed further.
+
+## 14. Suggested Next Refactor Steps (If Needed Later)
+
+1. Extract auth provider factory if adding more OAuth providers.
+2. Split large service methods (especially discovery/matches/auth) into collaborators.
+3. Introduce repository interfaces for stronger DIP.
+4. Convert tag generation to explicit strategy objects for better OCP compliance.
+
+## 15. Final Summary
+
+Implemented with strong evidence:
+
+- Singleton
+- Adapter
+- Observer
+- Strategy
+- Template Method
+- Proxy (additional)
+- Facade-style layering (additional)
+
+Partially implemented (simple-functional style, not full GoF hierarchy):
+
+- Factory
+
+Not explicitly implemented in domain code:
+
+- Composite
+
+This is the current, source-verified status of the Flately architecture.
