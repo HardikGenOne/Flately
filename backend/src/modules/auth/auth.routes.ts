@@ -5,7 +5,7 @@ import {
 	login,
 	signup,
 	startGoogleAuth,
-} from './auth.controller';
+} from './auth.controller.js';
 
 const router = Router();
 

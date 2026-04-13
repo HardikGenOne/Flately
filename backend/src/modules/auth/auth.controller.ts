@@ -6,7 +6,7 @@ import {
   getGoogleAuthorizationUrl,
   signInWithEmail,
   signUpWithEmail,
-} from './auth.service';
+} from './auth.service.js';
 
 const GOOGLE_CALLBACK_ROUTE = '/auth/callback';
 

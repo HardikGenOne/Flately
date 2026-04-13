@@ -3,6 +3,19 @@ classDiagram
 
   class AuthController
   class AuthService
+  class EmailAuthStrategy {
+    <<interface>>
+    +execute(credentials)
+  }
+  class EmailSignUpStrategy
+  class EmailSignInStrategy
+  class OAuthAuthorizationStrategy {
+    <<interface>>
+    +getAuthorizationUrl(source, redirectOrigin)
+    +completeAuthorization(code, state)
+    +consumeExchangeCode(code)
+  }
+  class GoogleOAuthStrategy
   class DiscoveryController
   class DiscoveryService
   class MatchesController
@@ -68,6 +81,11 @@ classDiagram
   }
 
   AuthController ..> AuthService : uses auth APIs
+  EmailSignUpStrategy ..|> EmailAuthStrategy : implements
+  EmailSignInStrategy ..|> EmailAuthStrategy : implements
+  GoogleOAuthStrategy ..|> OAuthAuthorizationStrategy : implements
+  AuthService o-- EmailAuthStrategy : factory product
+  AuthService o-- OAuthAuthorizationStrategy : factory product
   DiscoveryController ..> DiscoveryService : feed and swipe
   MatchesController ..> MatchesService : list matches
   MatchesController ..> DiscoveryService : connect via like

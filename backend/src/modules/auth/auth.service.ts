@@ -45,6 +45,19 @@ type GoogleExchangeCodeEntry = {
   session: AuthSession;
 };
 
+interface EmailAuthStrategy {
+  execute(credentials: EmailCredentials): Promise<AuthSession>;
+}
+
+interface OAuthAuthorizationStrategy {
+  getAuthorizationUrl(source?: string, redirectOrigin?: string): string;
+  completeAuthorization(
+    code: string,
+    state: string,
+  ): Promise<{ exchangeCode: string; source?: string; redirectOrigin?: string }>;
+  consumeExchangeCode(code: string): AuthSession;
+}
+
 const GOOGLE_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_CODE_TTL_MS = 2 * 60 * 1000;
 
@@ -52,138 +65,162 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function readString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 function sanitizeSource(source?: string): string | undefined {
   if (typeof source !== 'string') {
     return undefined;
   }
 
-  const trimmed = source.trim().toLowerCase();
-  return /^[a-z0-9-]{1,32}$/.test(trimmed) ? trimmed : undefined;
+  const normalized = source.trim().toLowerCase();
+  if (normalized === 'mobile') {
+    return 'mobile';
+  }
+
+  return undefined;
 }
 
-function sanitizeRedirectOrigin(origin?: string): string | undefined {
-  if (typeof origin !== 'string') {
+function sanitizeRedirectOrigin(redirectOrigin?: string): string | undefined {
+  if (typeof redirectOrigin !== 'string') {
+    return undefined;
+  }
+
+  const candidate = redirectOrigin.trim();
+  if (!candidate) {
     return undefined;
   }
 
   try {
-    const url = new URL(origin.trim());
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return undefined;
     }
 
-    return `${url.protocol}//${url.host}`;
+    const normalized = parsed.origin;
+
+    const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:5173']
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+      .map((origin) => {
+        try {
+          return new URL(origin).origin;
+        } catch {
+          return null;
+        }
+      })
+      .filter((origin): origin is string => origin !== null);
+
+    if (!allowedOrigins.includes(normalized)) {
+      return undefined;
+    }
+
+    return normalized;
   } catch {
     return undefined;
   }
 }
 
-function readString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === 'string' ? value : undefined;
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }
 
-async function fetchGoogleUserProfile(code: string): Promise<GoogleUserProfile> {
-  const config = authService.getGoogleConfig();
-
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      code,
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      redirect_uri: config.callbackUrl,
-      grant_type: 'authorization_code',
-    }),
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
-  }
-
-  const tokenPayload = await tokenResponse.json();
-  if (!isRecord(tokenPayload)) {
-    throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
-  }
-
-  const accessToken = readString(tokenPayload, 'access_token');
-  if (!accessToken) {
-    throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
-  }
-
-  const userInfoResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!userInfoResponse.ok) {
-    throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
-  }
-
-  const userInfoPayload = await userInfoResponse.json();
-  if (!isRecord(userInfoPayload)) {
-    throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
-  }
-
-  const sub = readString(userInfoPayload, 'sub');
-  const email = readString(userInfoPayload, 'email');
-  const emailVerifiedRaw = userInfoPayload.email_verified;
-  const emailVerified = emailVerifiedRaw === true || emailVerifiedRaw === 'true';
-
-  if (!sub || !email) {
-    throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
-  }
-
-  if (!emailVerified) {
-    throw new Error('GOOGLE_EMAIL_NOT_VERIFIED');
-  }
-
-  return {
-    sub,
-    email,
-    name: readString(userInfoPayload, 'name') ?? null,
-    picture: readString(userInfoPayload, 'picture') ?? null,
+function signAccessToken(user: SessionUser): string {
+  const payload = {
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    picture: user.picture,
   };
+
+  const options: SignOptions = {
+    expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'],
+  };
+
+  return jwt.sign(payload, env.JWT_ACCESS_SECRET, options);
 }
 
-export class AuthService {
-  private readonly googleOAuthStates = new Map<string, GoogleOAuthStateEntry>();
-  private readonly googleExchangeCodes = new Map<string, GoogleExchangeCodeEntry>();
-
-  private normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
-  }
-
-  private signAccessToken(user: SessionUser): string {
-    const payload = {
-      sub: user.id,
+function toSession(user: SessionUser): AuthSession {
+  return {
+    accessToken: signAccessToken(user),
+    user: {
+      id: user.id,
       email: user.email,
       name: user.name,
       picture: user.picture,
-    };
+    },
+  };
+}
 
-    const options: SignOptions = {
-      expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'],
-    };
+class EmailSignUpStrategy implements EmailAuthStrategy {
+  async execute(credentials: EmailCredentials): Promise<AuthSession> {
+    const email = normalizeEmail(credentials.email);
+    const existing = await prisma.user.findUnique({ where: { email } });
 
-    return jwt.sign(payload, env.JWT_ACCESS_SECRET, options);
+    if (existing) {
+      throw new Error('EMAIL_ALREADY_EXISTS');
+    }
+
+    const passwordHash = await bcrypt.hash(credentials.password, 10);
+
+    let user;
+
+    try {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: credentials.name?.trim() || null,
+          passwordHash,
+          picture: null,
+        },
+      });
+    } catch (error) {
+      const isUniqueError =
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string }).code === 'P2002';
+
+      if (!isUniqueError) {
+        throw error;
+      }
+
+      const existingByEmail = await prisma.user.findUnique({ where: { email } });
+      if (existingByEmail) {
+        throw new Error('EMAIL_ALREADY_EXISTS');
+      }
+
+      throw new Error('AUTH_STORAGE_CONFLICT');
+    }
+
+    return toSession(user);
   }
+}
 
-  private toSession(user: SessionUser): AuthSession {
-    return {
-      accessToken: this.signAccessToken(user),
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-      },
-    };
+class EmailSignInStrategy implements EmailAuthStrategy {
+  async execute(credentials: EmailCredentials): Promise<AuthSession> {
+    const email = normalizeEmail(credentials.email);
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || !user.passwordHash) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
+
+    const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
+
+    if (!isValidPassword) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
+
+    return toSession(user);
   }
+}
+
+class GoogleOAuthStrategy implements OAuthAuthorizationStrategy {
+  private readonly googleOAuthStates = new Map<string, GoogleOAuthStateEntry>();
+  private readonly googleExchangeCodes = new Map<string, GoogleExchangeCodeEntry>();
 
   private cleanExpiredGoogleOAuthState(): void {
     const now = Date.now();
@@ -203,7 +240,7 @@ export class AuthService {
     }
   }
 
-  getGoogleConfig(): {
+  private getGoogleConfig(): {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
@@ -261,67 +298,74 @@ export class AuthService {
     return code;
   }
 
-  async signUpWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-    const email = this.normalizeEmail(credentials.email);
-    const existing = await prisma.user.findUnique({ where: { email } });
+  private async fetchGoogleUserProfile(code: string): Promise<GoogleUserProfile> {
+    const config = this.getGoogleConfig();
 
-    if (existing) {
-      throw new Error('EMAIL_ALREADY_EXISTS');
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: config.callbackUrl,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
     }
 
-    const passwordHash = await bcrypt.hash(credentials.password, 10);
-
-    let user;
-
-    try {
-      user = await prisma.user.create({
-        data: {
-          email,
-          name: credentials.name?.trim() || null,
-          passwordHash,
-          picture: null,
-        },
-      });
-    } catch (error) {
-      const isUniqueError =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: string }).code === 'P2002';
-
-      if (!isUniqueError) {
-        throw error;
-      }
-
-      const existingByEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingByEmail) {
-        throw new Error('EMAIL_ALREADY_EXISTS');
-      }
-
-      throw new Error('AUTH_STORAGE_CONFLICT');
+    const tokenPayload = await tokenResponse.json();
+    if (!isRecord(tokenPayload)) {
+      throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
     }
 
-    return this.toSession(user);
+    const accessToken = readString(tokenPayload, 'access_token');
+    if (!accessToken) {
+      throw new Error('GOOGLE_TOKEN_EXCHANGE_FAILED');
+    }
+
+    const userInfoResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!userInfoResponse.ok) {
+      throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
+    }
+
+    const userInfoPayload = await userInfoResponse.json();
+    if (!isRecord(userInfoPayload)) {
+      throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
+    }
+
+    const sub = readString(userInfoPayload, 'sub');
+    const email = readString(userInfoPayload, 'email');
+    const emailVerifiedRaw = userInfoPayload.email_verified;
+    const emailVerified = emailVerifiedRaw === true || emailVerifiedRaw === 'true';
+
+    if (!sub || !email) {
+      throw new Error('GOOGLE_USERINFO_FETCH_FAILED');
+    }
+
+    if (!emailVerified) {
+      throw new Error('GOOGLE_EMAIL_NOT_VERIFIED');
+    }
+
+    return {
+      sub,
+      email,
+      name: readString(userInfoPayload, 'name') ?? null,
+      picture: readString(userInfoPayload, 'picture') ?? null,
+    };
   }
 
-  async signInWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
-    const email = this.normalizeEmail(credentials.email);
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user || !user.passwordHash) {
-      throw new Error('INVALID_CREDENTIALS');
-    }
-
-    const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
-
-    if (!isValidPassword) {
-      throw new Error('INVALID_CREDENTIALS');
-    }
-
-    return this.toSession(user);
-  }
-
-  getGoogleAuthorizationUrl(source?: string, redirectOrigin?: string): string {
+  getAuthorizationUrl(source?: string, redirectOrigin?: string): string {
     const config = this.getGoogleConfig();
     const state = this.createGoogleOAuthState(source, redirectOrigin);
 
@@ -336,13 +380,13 @@ export class AuthService {
     return authorizationUrl.toString();
   }
 
-  async completeGoogleAuthorization(
+  async completeAuthorization(
     code: string,
     state: string,
   ): Promise<{ exchangeCode: string; source?: string; redirectOrigin?: string }> {
     const stateEntry = this.consumeGoogleOAuthState(state);
-    const googleProfile = await fetchGoogleUserProfile(code);
-    const email = this.normalizeEmail(googleProfile.email);
+    const googleProfile = await this.fetchGoogleUserProfile(code);
+    const email = normalizeEmail(googleProfile.email);
 
     const existingByGoogleId = await prisma.user.findFirst({
       where: {
@@ -387,7 +431,7 @@ export class AuthService {
       }
     }
 
-    const exchangeCode = this.createExchangeCode(this.toSession(user));
+    const exchangeCode = this.createExchangeCode(toSession(user));
 
     return {
       exchangeCode,
@@ -396,7 +440,7 @@ export class AuthService {
     };
   }
 
-  consumeGoogleExchangeCode(code: string): AuthSession {
+  consumeExchangeCode(code: string): AuthSession {
     this.cleanExpiredExchangeCodes();
 
     const entry = this.googleExchangeCodes.get(code);
@@ -407,6 +451,51 @@ export class AuthService {
     }
 
     return entry.session;
+  }
+}
+
+export class AuthService {
+  private readonly emailSignUpStrategy = new EmailSignUpStrategy();
+  private readonly emailSignInStrategy = new EmailSignInStrategy();
+  private readonly googleOAuthStrategy = new GoogleOAuthStrategy();
+
+  private createEmailAuthStrategy(intent: 'signup' | 'signin'): EmailAuthStrategy {
+    switch (intent) {
+      case 'signup':
+        return this.emailSignUpStrategy;
+      case 'signin':
+        return this.emailSignInStrategy;
+    }
+  }
+
+  private createOAuthAuthorizationStrategy(provider: 'google'): OAuthAuthorizationStrategy {
+    switch (provider) {
+      case 'google':
+        return this.googleOAuthStrategy;
+    }
+  }
+
+  async signUpWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
+    return this.createEmailAuthStrategy('signup').execute(credentials);
+  }
+
+  async signInWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
+    return this.createEmailAuthStrategy('signin').execute(credentials);
+  }
+
+  getGoogleAuthorizationUrl(source?: string, redirectOrigin?: string): string {
+    return this.createOAuthAuthorizationStrategy('google').getAuthorizationUrl(source, redirectOrigin);
+  }
+
+  async completeGoogleAuthorization(
+    code: string,
+    state: string,
+  ): Promise<{ exchangeCode: string; source?: string; redirectOrigin?: string }> {
+    return this.createOAuthAuthorizationStrategy('google').completeAuthorization(code, state);
+  }
+
+  consumeGoogleExchangeCode(code: string): AuthSession {
+    return this.createOAuthAuthorizationStrategy('google').consumeExchangeCode(code);
   }
 }
 

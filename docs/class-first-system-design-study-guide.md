@@ -55,6 +55,19 @@ classDiagram
 
   class AuthController
   class AuthService
+  class EmailAuthStrategy {
+    <<interface>>
+    +execute(credentials)
+  }
+  class EmailSignUpStrategy
+  class EmailSignInStrategy
+  class OAuthAuthorizationStrategy {
+    <<interface>>
+    +getAuthorizationUrl(source, redirectOrigin)
+    +completeAuthorization(code, state)
+    +consumeExchangeCode(code)
+  }
+  class GoogleOAuthStrategy
   class DiscoveryController
   class DiscoveryService
   class MatchesController
@@ -120,6 +133,11 @@ classDiagram
   }
 
   AuthController ..> AuthService : uses auth APIs
+  EmailSignUpStrategy ..|> EmailAuthStrategy : implements
+  EmailSignInStrategy ..|> EmailAuthStrategy : implements
+  GoogleOAuthStrategy ..|> OAuthAuthorizationStrategy : implements
+  AuthService o-- EmailAuthStrategy : factory product
+  AuthService o-- OAuthAuthorizationStrategy : factory product
   DiscoveryController ..> DiscoveryService : feed and swipe
   MatchesController ..> MatchesService : list matches
   MatchesController ..> DiscoveryService : connect via like
@@ -187,6 +205,11 @@ This preserves import compatibility for routes and UI code.
 
 - `AuthController` in `backend/src/modules/auth/auth.controller.ts`
 - `AuthService` in `backend/src/modules/auth/auth.service.ts`
+- `EmailAuthStrategy` (interface) in `backend/src/modules/auth/auth.service.ts`
+- `EmailSignUpStrategy` in `backend/src/modules/auth/auth.service.ts`
+- `EmailSignInStrategy` in `backend/src/modules/auth/auth.service.ts`
+- `OAuthAuthorizationStrategy` (interface) in `backend/src/modules/auth/auth.service.ts`
+- `GoogleOAuthStrategy` in `backend/src/modules/auth/auth.service.ts`
 
 ### Discovery
 
@@ -286,22 +309,21 @@ Trade-offs:
 
 ## 6.2 Creational: Factory
 
-Status: Partially present as simple factory functions, not a full GoF class-based Factory Method/Abstract Factory hierarchy.
+Status: Implemented in auth via GoF-style Factory Method on `AuthService`.
 
-Concrete simple-factory evidence:
+Concrete evidence:
 
-- `getPrismaClient()` in `backend/src/config/prisma.ts` creates/returns a single `PrismaClient` lazily.
-- `withAuthenticatedController(...)` in `backend/src/middlewares/controller-chain.middleware.ts` constructs and returns a middleware chain array.
+- `AuthService.createEmailAuthStrategy(intent)` returns `EmailSignUpStrategy` or `EmailSignInStrategy` through the `EmailAuthStrategy` interface in `backend/src/modules/auth/auth.service.ts`.
+- `AuthService.createOAuthAuthorizationStrategy(provider)` returns `GoogleOAuthStrategy` through the `OAuthAuthorizationStrategy` interface in `backend/src/modules/auth/auth.service.ts`.
 
-What is not implemented:
+Why this is Factory Method:
 
-- No dedicated `Factory` class hierarchy for service/provider families.
-- No `AbstractFactory` for multi-provider auth (Google/Discord/GitHub families).
+- Product creation/selection is centralized in creator methods.
+- Callers (`signUpWithEmail`, `signInWithEmail`, `getGoogleAuthorizationUrl`, `completeGoogleAuthorization`, `consumeGoogleExchangeCode`) operate against product interfaces, not concrete classes.
 
-Trade-off:
+Remaining gap:
 
-- Current code keeps creation simple.
-- If provider families grow, a formal factory becomes useful.
+- This is not yet an `AbstractFactory` for multiple OAuth providers; the current provider family is `google` only.
 
 ## 6.3 Structural: Composite
 
@@ -450,7 +472,7 @@ Applied examples:
 
 Trade-off areas:
 
-- `AuthService` in `backend/src/modules/auth/auth.service.ts` mixes password auth, OAuth state storage, token exchange, and session shaping.
+- `AuthService` in `backend/src/modules/auth/auth.service.ts` now delegates credential and OAuth flows through strategy products, but still owns orchestration and factory selection.
 - `MatchesService.getMyMatches` in `backend/src/modules/matches/matches.service.ts` combines query, enrichment, compatibility join, and tag generation.
 - `DiscoveryService` in `backend/src/modules/discovery/discovery.service.ts` handles both feed composition and swipe mutation.
 
@@ -532,7 +554,7 @@ This is pragmatic DIP, not pure DIP.
 - `backend/src/modules/auth/auth.controller.ts`:
   - Class facade, singleton wrapper, error mapping strategy via switch, OAuth callback orchestration.
 - `backend/src/modules/auth/auth.service.ts`:
-  - Class singleton, auth domain logic, in-memory OAuth state/exchange maps.
+  - Class singleton using Factory Method (`createEmailAuthStrategy`, `createOAuthAuthorizationStrategy`) with concrete strategy products.
 - `backend/src/modules/discovery/discovery.controller.ts`:
   - Class facade, input normalization (`superlike`/`skip`).
 - `backend/src/modules/discovery/discovery.service.ts`:
@@ -629,7 +651,7 @@ Answer:
 - Controller classes per module.
 - Service classes per module.
 - Transport classes per frontend domain.
-- Strategy classes in matching and auth continuation.
+- Strategy classes in matching, auth, and auth continuation.
 - Template base + concrete upsert subclasses.
 
 ### Q2: Where is Singleton applied?
@@ -644,8 +666,10 @@ Answer:
 
 Answer:
 
-- Simple factory function style exists (`getPrismaClient`, `withAuthenticatedController`).
-- Full GoF Factory class hierarchy is not currently implemented.
+- Auth uses GoF-style Factory Method in `backend/src/modules/auth/auth.service.ts`.
+- `createEmailAuthStrategy(intent)` returns `EmailSignUpStrategy` or `EmailSignInStrategy` via `EmailAuthStrategy`.
+- `createOAuthAuthorizationStrategy(provider)` returns `GoogleOAuthStrategy` via `OAuthAuthorizationStrategy`.
+- Simple factory function style also exists in `getPrismaClient` and `withAuthenticatedController`.
 
 ### Q4: Where is Composite applied?
 
@@ -699,7 +723,7 @@ Answer:
 
 ## 13. Honest Gap Register
 
-1. No full GoF Factory hierarchy yet.
+1. No multi-provider Abstract Factory yet (current OAuth family is Google only).
 2. No custom Composite domain abstraction yet.
 3. DIP is partial, not strict, because persistence is concrete-coupled to Prisma.
 4. Some services remain large and can be decomposed further.
@@ -716,16 +740,13 @@ Answer:
 Implemented with strong evidence:
 
 - Singleton
+- Factory Method (auth)
 - Adapter
 - Observer
 - Strategy
 - Template Method
 - Proxy (additional)
 - Facade-style layering (additional)
-
-Partially implemented (simple-functional style, not full GoF hierarchy):
-
-- Factory
 
 Not explicitly implemented in domain code:
 
