@@ -147,6 +147,10 @@ flowchart LR
 
 All current UML and ERD diagrams are linked here.
 
+Planning and roadmap:
+
+- [Future Plan (Bugs + System Design)](docs/future-plan.md)
+
 | Diagram | SVG | PDF | Focus |
 | --- | --- | --- | --- |
 | 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure. Updated 2026-04-14 for auth factory refactor. Canonical source: [Mermaid](docs/diagrams/01-class-diagram.mmd) |

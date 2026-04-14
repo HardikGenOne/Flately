@@ -58,6 +58,7 @@ export class DiscoveryService {
           occupation: true,
           city: true,
           hasRoom: true,
+          photos: true,
           user: {
             select: {
               name: true,
@@ -93,7 +94,12 @@ export class DiscoveryService {
           occupation: profile.occupation,
           city: profile.city,
           hasRoom: profile.hasRoom,
-          photos: profile.user?.picture ? [profile.user.picture] : [],
+          photos:
+            Array.isArray(profile.photos) && profile.photos.length > 0
+              ? profile.photos.filter((photo) => typeof photo === 'string' && photo.trim().length > 0)
+              : profile.user?.picture
+                ? [profile.user.picture]
+                : [],
           compatibility: match.score,
           budgetMin: preference?.minBudget || 0,
           budgetMax: preference?.maxBudget || 0,

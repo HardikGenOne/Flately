@@ -115,7 +115,14 @@ export class MatchesService {
               occupation: profile.occupation,
               city: profile.city,
               hasRoom: profile.hasRoom,
-              photos: profile.user?.picture ? [profile.user.picture] : [],
+              photos:
+                Array.isArray(profile.photos) && profile.photos.length > 0
+                  ? profile.photos.filter(
+                      (photo) => typeof photo === 'string' && photo.trim().length > 0,
+                    )
+                  : profile.user?.picture
+                    ? [profile.user.picture]
+                    : [],
               budgetMin: preference?.minBudget || 0,
               budgetMax: preference?.maxBudget || 0,
               tags: this.generateMatchTags(profile, preference),

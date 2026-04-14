@@ -3,8 +3,12 @@ import { toApiErrorMessage } from '@/services/api'
 import { getDiscoveryFeed, swipeDiscoveryUser } from '@/services/discovery.transport'
 import type { DiscoveryProfile } from '@/types'
 
-function getCandidateImage(candidate: DiscoveryProfile): string | null {
-  return candidate.photos.length > 0 ? candidate.photos[0] : null
+function getCandidateImage(candidate: DiscoveryProfile, failedImageUrls: Set<string>): string | null {
+  const firstPhoto = candidate.photos.find(
+    (photo) =>
+      typeof photo === 'string' && photo.trim().length > 0 && !failedImageUrls.has(photo.trim()),
+  )
+  return firstPhoto || null
 }
 
 export function DiscoveryPage() {
@@ -15,6 +19,7 @@ export function DiscoveryPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set())
 
   function retryLoad(): void {
     setReloadToken((value) => value + 1)
@@ -57,6 +62,10 @@ export function DiscoveryPage() {
     () => feed.find((candidate) => candidate.id === selectedUserId) || null,
     [feed, selectedUserId],
   )
+
+  const selectedCandidateImage = selectedCandidate
+    ? getCandidateImage(selectedCandidate, failedImageUrls)
+    : null
 
   function removeCandidate(userId: string): void {
     setFeed((prev) => {
@@ -200,11 +209,18 @@ export function DiscoveryPage() {
         ) : (
           <div className="space-y-4">
             <div className="overflow-hidden rounded-lg border border-neutral-border">
-              {getCandidateImage(selectedCandidate) ? (
+              {selectedCandidateImage ? (
                 <img
-                  src={getCandidateImage(selectedCandidate) || ''}
+                  src={selectedCandidateImage}
                   alt={selectedCandidate.name}
                   className="h-72 w-full object-cover"
+                  onError={() => {
+                    setFailedImageUrls((prev) => {
+                      const next = new Set(prev)
+                      next.add(selectedCandidateImage.trim())
+                      return next
+                    })
+                  }}
                 />
               ) : (
                 <div className="flex h-72 items-center justify-center bg-canvas text-sm text-slate-500">

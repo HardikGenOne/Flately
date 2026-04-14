@@ -199,6 +199,7 @@ describe('getDiscoveryFeed', () => {
         occupation: true,
         city: true,
         hasRoom: true,
+        photos: true,
         user: {
           select: {
             name: true,
