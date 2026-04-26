@@ -6,35 +6,37 @@
 stateDiagram-v2
     [*] --> LandingPage
 
-    LandingPage --> Auth0Login : Click Get Started
-    Auth0Login --> Auth0Hosted : Redirect to Auth0
-    Auth0Hosted --> CallbackRedirect : Authenticate
-    CallbackRedirect --> AuthSync : Redirect to /app
+    LandingPage --> AuthChoice : Click Get Started
+    AuthChoice --> GoogleOAuth : Google Login
+    AuthChoice --> EmailAuth : Email Login/Signup
+    
+    GoogleOAuth --> AuthSync : OAuth Callback
+    EmailAuth --> AuthSync : Auth Success
 
     state AuthSync {
-        [*] --> CheckAuth0State
-        CheckAuth0State --> DispatchSetAuth : isAuthenticated=true
-        DispatchSetAuth --> PostUsersMe : POST /users/me
-        PostUsersMe --> UserUpserted : getOrCreateUser()
+        [*] --> CheckUserRecord
+        CheckUserRecord --> DispatchSetAuth : User Ready
+        DispatchSetAuth --> FetchProfile : GET /profiles/me
     }
 
-    AuthSync --> CheckOnboarding : User record ready
+    AuthSync --> CheckOnboarding : Profile loaded
     CheckOnboarding --> OnboardingWizard : onboardingCompleted=false
     CheckOnboarding --> Dashboard : onboardingCompleted=true
 
     state OnboardingWizard {
-        [*] --> Step1_BasicIntel
-        Step1_BasicIntel --> Step2_Location : Next
-        Step2_Location --> Step3_Budget : Next
-        Step3_Budget --> Step4_Habits : Next
-        Step4_Habits --> Step5_Review : Next
-        Step5_Review --> SubmitOnboarding : Confirm
+        [*] --> Step1_Identity
+        Step1_Identity --> Step2_Housing : Next
+        Step2_Housing --> Step3_Budget : Next
+        Step3_Budget --> Step4_Lifestyle : Next
+        Step4_Lifestyle --> Step5_Priorities : Next
+        Step5_Priorities --> Step6_Review : Next
+        Step6_Review --> SubmitOnboarding : Finish
     }
 
     state SubmitOnboarding {
-        [*] --> PostProfilesMe
-        PostProfilesMe --> PostPreferencesMe : POST /profiles/me
-        PostPreferencesMe --> NavigateToDashboard : POST /preferences/me
+        [*] --> SaveProfile
+        SaveProfile --> SavePreferences : POST /profiles/me
+        SavePreferences --> NavigateToDashboard : POST /preferences/me
     }
 
     OnboardingWizard --> Dashboard
@@ -49,43 +51,42 @@ stateDiagram-v2
 
     state OpenDiscoveryPage {
         [*] --> FetchFeed
-        FetchFeed --> GetExistingSwipes : GET /discovery/feed
-        GetExistingSwipes --> RunMatchingAlgorithm : Exclude already swiped
+        FetchFeed --> GetCandidateFeed : GET /discovery/feed
+        GetCandidateFeed --> RunMatchingEngine : Process Candidates
 
-        state RunMatchingAlgorithm {
-            [*] --> FetchAllProfiles
-            FetchAllProfiles --> EligibilityFilter
-            EligibilityFilter --> CheckCity : For each candidate
-            CheckCity --> CheckBudget : Same city
-            CheckBudget --> CheckGender : Budget overlaps
-            CheckGender --> CalculateScore : Gender compatible
-            CalculateScore --> RankResults : Weighted similarity
+        state RunMatchingEngine {
+            [*] --> FetchAllOptions
+            FetchAllOptions --> EligibilityFilter
+            EligibilityFilter --> CheckCity : EligibilityStrategy
+            CheckCity --> CheckBudget : Budget overlap
+            CheckBudget --> CheckGender : Preferred gender
+            CheckGender --> CalculateScore : ScoringStrategy
+            CalculateScore --> RankResults : Sort by compatibility
         }
 
-        RunMatchingAlgorithm --> EnrichProfiles : Sorted candidates
-        EnrichProfiles --> GenerateTags : Add profile + preference data
-        GenerateTags --> ReturnFeed : Max 4 tags each
+        RunMatchingEngine --> EnrichData : List of {userId, score}
+        EnrichData --> GenerateTags : Add profile metadata
+        GenerateTags --> ReturnFeed : Final candidates array
     }
 
     OpenDiscoveryPage --> DisplayQueue : Feed loaded
     DisplayQueue --> ViewProfileDetail : Select candidate
 
-    ViewProfileDetail --> SwipeLike : Click Like
-    ViewProfileDetail --> SwipeSkip : Click Skip
+    ViewProfileDetail --> SwipeLike : Click Connect
+    ViewProfileDetail --> SwipeSkip : Click Pass
 
-    SwipeSkip --> RecordSkipSwipe : POST /discovery/swipe
-    RecordSkipSwipe --> RemoveFromQueue : action=dislike
+    SwipeSkip --> RecordSkipSwipe : POST /discovery/swipe (dislike)
+    RecordSkipSwipe --> RemoveFromQueue
     RemoveFromQueue --> DisplayQueue : Next candidate
 
-    SwipeLike --> RecordLikeSwipe : POST /discovery/swipe
-    RecordLikeSwipe --> CheckMutualLike : action=like
+    SwipeLike --> RecordLikeSwipe : POST /discovery/swipe (like)
+    RecordLikeSwipe --> CheckMutualLike
 
     state CheckMutualLike {
         [*] --> QueryReverseSwipe
-        QueryReverseSwipe --> NoMatch : Reverse swipe not found
-        QueryReverseSwipe --> MutualMatch : Reverse like exists
-        MutualMatch --> SortUserIds : userAId < userBId
-        SortUserIds --> UpsertMatch : Create Match record
+        QueryReverseSwipe --> NoMatch : No reverse like
+        QueryReverseSwipe --> MutualMatch : Reverse like found
+        MutualMatch --> CreateMatch : Upsert Match record
     }
 
     CheckMutualLike --> MatchNotification : matched=true
@@ -103,33 +104,32 @@ stateDiagram-v2
     [*] --> OpenChatPage
 
     OpenChatPage --> FetchMatches : GET /matches/me
-    FetchMatches --> DisplayThreadList : Show match conversations
+    FetchMatches --> DisplayMatchList : Show matched users
 
-    DisplayThreadList --> SelectThread : Click on match
-    SelectThread --> ValidateAccess : GET /chat/:matchId
+    DisplayMatchList --> SelectMatch : Click on match
+    SelectMatch --> LoadConversation : GET /chat/:matchId
 
-    state ValidateAccess {
-        [*] --> CheckUserInMatch
-        CheckUserInMatch --> Forbidden : User not in match
-        CheckUserInMatch --> GetOrCreateConvo : User is participant
-        GetOrCreateConvo --> LoadMessages : Fetch messages ASC
-        LoadMessages --> FetchOtherUser : Get other user profile
+    state LoadConversation {
+        [*] --> ValidateAccess
+        ValidateAccess --> GetOrCreateConvo : Participant check
+        GetOrCreateConvo --> FetchMessages : Load message history
+        FetchMessages --> FetchProfile : Load other user details
     }
 
-    ValidateAccess --> DisplayMessages : Messages loaded
-    DisplayMessages --> JoinSocketRoom : socket.emit join
+    LoadConversation --> DisplayChat : Messages loaded
+    DisplayChat --> JoinSocketRoom : socket.emit join
 
     state SendMessageFlow {
         [*] --> TypeMessage
         TypeMessage --> OptimisticAppend : Press Send
-        OptimisticAppend --> EmitSocketMessage : Display immediately
-        EmitSocketMessage --> ServerPersists : socket.emit send_message
-        ServerPersists --> BroadcastToRoom : prisma.message.create
-        BroadcastToRoom --> OtherUserReceives : io.to().emit new_message
+        OptimisticAppend --> EmitSocketMessage : Local update
+        EmitSocketMessage --> ServerPersist : socket.emit send_message
+        ServerPersist --> BroadcastMessage : Save to DB
+        BroadcastMessage --> Receipt : Other user notified
     }
 
-    DisplayMessages --> SendMessageFlow : Compose message
-    SendMessageFlow --> DisplayMessages : Message sent
-    DisplayMessages --> SelectThread : Switch thread
-    DisplayMessages --> [*]
+    DisplayChat --> SendMessageFlow : Interact
+    SendMessageFlow --> DisplayChat
+    DisplayChat --> [*]
 ```
+

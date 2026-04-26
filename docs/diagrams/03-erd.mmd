@@ -1,6 +1,3 @@
-# Entity-Relationship Diagram — Flately
-
-```mermaid
 erDiagram
     USER {
         ObjectId id PK
@@ -91,5 +88,3 @@ erDiagram
     MATCH ||--o| CONVERSATION : "has (matchId)"
     CONVERSATION ||--o{ MESSAGE : "contains (conversationId)"
     USER ||--o{ MESSAGE : "sends (senderId)"
-```
-

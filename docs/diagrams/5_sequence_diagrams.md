@@ -1,128 +1,111 @@
 # Sequence Diagrams — Flately
 
-## Sequence Diagram 1: Authentication & User Sync
+## Sequence Diagram 1: Authentication & User Sync (Google OAuth)
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A0 as Auth0 Hosted Login
-    participant AS as AuthSync Component
-    participant RX as Redux Store
-    participant AX as Axios API Client
-    participant UC as UsersController
-    participant US as UsersService
+    participant G as Google OAuth
+    participant AS as Auth Controller
+    participant ST as Auth Strategy Factory
+    participant GS as Google OAuth Strategy
     participant DB as Prisma / MongoDB
 
-    B->>A0: loginWithRedirect()
-    A0-->>B: Redirect with access_token
-    B->>AS: useEffect triggers (isAuthenticated=true)
-    AS->>RX: dispatch(setAuth(user))
-    AS->>AX: apiRequest("/users/me", {}, getAccessTokenSilently)
-    AX->>AX: getAccessTokenSilently() → JWT
-    AX->>UC: GET /users/me (Bearer JWT)
-    UC->>UC: checkJwt → validate RS256 against JWKS
-    UC->>UC: attachUserId → req.userId = payload.sub
-    UC->>US: getOrCreateUser({auth0Id, email, name, picture})
-    US->>DB: prisma.user.findUnique({where: {auth0id}})
+    B->>G: Authorize (Email/Profile scope)
+    G-->>B: Redirect with Code + State
+    B->>AS: GET /auth/google/callback?code=...
+    AS->>ST: createOAuthStrategy("google")
+    ST->>GS: completeAuthorization(code, state)
+    
+    GS->>G: Exchange Code for Token
+    G-->>GS: Tokens + Profile (sub, email, name, pic)
+    
+    GS->>DB: prisma.user.findFirst({ googleId: profile.sub })
     alt User exists
-        DB-->>US: User record
+        GS->>DB: prisma.user.update({ data: { name, picture } })
     else New user
-        US->>DB: prisma.user.create({auth0id, email, name, picture})
-        DB-->>US: New User record
+        GS->>DB: prisma.user.create({ data: { email, googleId, ... } })
     end
-    US-->>UC: User
-    UC-->>AX: 200 JSON(User)
-    AX-->>AS: User data
+    
+    GS-->>AS: Auth Session (JWT)
+    AS-->>B: HttpOnly Cookie / JSON Response
 ```
 
-## Sequence Diagram 2: Discovery Feed Loading
+## Sequence Diagram 2: Discovery Feed Loading (Matching Engine)
 
 ```mermaid
 sequenceDiagram
     participant FE as DiscoveryPage
-    participant AX as Axios Client
-    participant DC as DiscoveryController
-    participant DS as DiscoveryService
-    participant MS as MatchingService
+    participant DC as Discovery Controller
+    participant DS as Discovery Service
+    participant MS as Matching Service
+    participant ES as Eligibility Strategy
+    participant SS as Scoring Strategy
     participant DB as Prisma / MongoDB
 
-    FE->>AX: GET /discovery/feed (Bearer JWT)
-    AX->>DC: getFeed(req, res)
+    FE->>DC: GET /discovery/feed (Bearer JWT)
     DC->>DS: getDiscoveryFeed(userId)
 
-    DS->>DB: prisma.swipe.findMany({where: {fromUserId: userId}})
-    DB-->>DS: Existing swipes → excludedUserIds[]
-
     DS->>MS: findMatchesForUser(userId)
-    MS->>DB: prisma.profile.findUnique({where: {userId}})
-    MS->>DB: prisma.preference.findUnique({where: {userId}})
-    DB-->>MS: User's profile + preference
+    MS->>DB: prisma.profile.findUnique({ userId })
+    MS->>DB: prisma.preference.findUnique({ userId })
+    DB-->>MS: User Context
 
-    MS->>DB: prisma.profile.findMany({where: {userId: {not: userId}}})
+    MS->>DB: prisma.profile.findMany({ where: { not: userId } })
     MS->>DB: prisma.preference.findMany()
-    DB-->>MS: All candidate profiles + preferences
+    DB-->>MS: Candidate Pool
 
     loop For each candidate
-        MS->>MS: isEligible(userA, userB) — city, budget, gender check
+        MS->>ES: isEligible(userA, userB)
+        ES-->>MS: true/false
+        
         alt Eligible
-            MS->>MS: calculateScore(prefA, prefB) — weighted similarity
-            MS->>MS: Push {userId, score} to results
+            MS->>SS: calculateScore(prefA, prefB)
+            SS-->>MS: weightedScore
         end
     end
 
-    MS-->>DS: Sorted results [{userId, score}]
-    DS->>DS: Filter out excludedUserIds
-
-    loop For each filtered candidate
-        DS->>DB: prisma.profile.findUnique({include: {user: true}})
-        DS->>DB: prisma.preference.findUnique()
-        DS->>DS: generateTags(profile, preference) — max 4 tags
+    MS-->>DS: Ranked list of {userId, score}
+    
+    loop Enrichment
+        DS->>DB: prisma.profile.findUnique(...)
+        DS->>DS: generateTags(profile, preference)
     end
 
-    DS-->>DC: Enriched feed array
-    DC-->>AX: 200 JSON(feed)
-    AX-->>FE: Display queue + profile details
+    DS-->>DC: Enriched Feed Array
+    DC-->>FE: 200 JSON(feed)
 ```
 
-## Sequence Diagram 3: Swipe Like → Mutual Match
+## Sequence Diagram 3: Swipe Connect → Match Creation
 
 ```mermaid
 sequenceDiagram
     participant FE as DiscoveryPage
-    participant AX as Axios Client
-    participant DC as DiscoveryController
-    participant DS as DiscoveryService
-    participant MTS as MatchesService
+    participant DC as Discovery Controller
+    participant DS as Discovery Service
+    participant MTS as Matches Service
     participant DB as Prisma / MongoDB
 
-    FE->>AX: POST /discovery/swipe {toUserId, action: "like"}
-    AX->>DC: swipe(req, res)
-    DC->>DC: Validate action (like|dislike|skip|superlike)
+    FE->>DC: POST /discovery/swipe { toUserId, action: "like" }
     DC->>DS: swipeUser(userId, toUserId, "like")
 
-    DS->>DS: Normalize: "superlike"→"like", "skip"→"dislike"
-
-    DS->>DB: prisma.swipe.upsert({fromUserId, toUserId, action: "like"})
-    DB-->>DS: Swipe record
+    DS->>DB: prisma.swipe.upsert({ fromUserId, toUserId, action: "like" })
+    DB-->>DS: Swipe Recorded
 
     DS->>MTS: checkAndCreateMatch(fromUserId, toUserId)
-    MTS->>DB: prisma.swipe.findUnique({fromUserId: toUserId, toUserId: fromUserId})
+    MTS->>DB: prisma.swipe.findUnique({ fromUserId: toUserId, toUserId: fromUserId })
 
     alt Reverse like exists
-        DB-->>MTS: reverseSwipe (action="like")
-        MTS->>MTS: Sort IDs: userAId = min(from, to), userBId = max(from, to)
-        MTS->>DB: prisma.match.upsert({userAId, userBId})
-        DB-->>MTS: Match record
-        MTS-->>DS: {matched: true, match}
-        DS-->>DC: {swipe, matched: true}
-        DC-->>AX: 200 {success: true}
-        AX-->>FE: Show "It's a Match!" notification
-    else No reverse like
-        DB-->>MTS: null or action≠"like"
-        MTS-->>DS: {matched: false}
-        DS-->>DC: {swipe, matched: false}
-        DC-->>AX: 200 {success: true}
-        AX-->>FE: Remove from queue, show next
+        DB-->>MTS: reverseSwipe ("like")
+        MTS->>DB: prisma.match.upsert({ userAId, userBId })
+        MTS-->>DS: { matched: true, match }
+        DS-->>DC: { success: true, matched: true }
+        DC-->>FE: 200 JSON ({ matched: true })
+    else No match
+        DB-->>MTS: null
+        MTS-->>DS: { matched: false }
+        DS-->>DC: { success: true, matched: false }
+        DC-->>FE: 200 JSON ({ matched: false })
     end
 ```
 
@@ -131,46 +114,33 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant A as User A (Browser)
-    participant AX as Axios Client
-    participant CC as ChatController
-    participant CS as ChatService
+    participant CC as Chat Controller
+    participant CS as Chat Service
     participant DB as Prisma / MongoDB
     participant SIO as Socket.IO Server
     participant B as User B (Browser)
 
-    A->>AX: GET /chat/:matchId (Bearer JWT)
-    AX->>CC: Openchat(req, res)
-    CC->>CS: validateUserInMatch(matchId, userId)
-    CS->>DB: prisma.match.findUnique({id: matchId})
-    DB-->>CS: Match {userAId, userBId}
-    CS-->>CC: true (user is participant)
-
+    A->>CC: GET /chat/:matchId
     CC->>CS: getOrCreateConversation(matchId)
-    CS->>DB: prisma.conversation.upsert({matchId})
-    DB-->>CS: Conversation
+    CS->>DB: prisma.conversation.upsert(...)
+    DB-->>CS: Conversation Record
 
     CC->>CS: getMessages(conversationId)
-    CS->>DB: prisma.message.findMany({orderBy: createdAt asc})
-    DB-->>CS: Message[]
+    CS->>DB: prisma.message.findMany(...)
+    DB-->>CS: History Array
+    
+    CC-->>A: { conversation, messages, otherUser }
 
-    CC->>DB: prisma.profile.findUnique({userId: otherUserId})
-    DB-->>CC: Other user's profile
-    CC-->>AX: {conversation, messages, otherUser}
-    AX-->>A: Render chat UI
+    A-->>SIO: socket.emit("join", conversationId)
+    B-->>SIO: socket.emit("join", conversationId)
 
-    A->>SIO: socket.emit("join", conversationId)
-    SIO->>SIO: socket.join(conversationId)
-
-    B->>SIO: socket.emit("join", conversationId)
-    SIO->>SIO: socket.join(conversationId)
-
-    A->>A: Type message, optimistic UI append
-    A->>SIO: socket.emit("send_message", {conversationId, senderId, content})
+    A->>SIO: socket.emit("send_message", { content })
     SIO->>CS: sendMessage(conversationId, senderId, content)
-    CS->>DB: prisma.message.create({conversationId, senderId, content})
-    DB-->>CS: New Message
-    CS-->>SIO: Message object
-    SIO->>A: io.to(conversationId).emit("new_message", {id, senderId, content, timestamp})
-    SIO->>B: io.to(conversationId).emit("new_message", {id, senderId, content, timestamp})
-    B->>B: Append message to UI
+    CS->>DB: prisma.message.create(...)
+    DB-->>CS: Message Persisted
+    
+    CS-->>SIO: Message Object
+    SIO->>A: io.to(convo).emit("new_message")
+    SIO->>B: io.to(convo).emit("new_message")
 ```
+

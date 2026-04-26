@@ -4,13 +4,16 @@
 classDiagram
     direction TB
 
+    %% ─── Data Models (Prisma) ─── %%
     class User {
         +String id
-        +String auth0id
         +String email
+        +String passwordHash
+        +String googleId
         +String name
         +String picture
         +DateTime createdAt
+        +DateTime updatedAt
     }
 
     class Profile {
@@ -20,7 +23,7 @@ classDiagram
         +Int age
         +String gender
         +String bio
-        +Array photos
+        +String[] photos
         +String city
         +Boolean hasRoom
         +String occupation
@@ -84,11 +87,24 @@ classDiagram
         +DateTime createdAt
     }
 
-    class UsersService {
-        +getOrCreateUser(data) User
+    %% ─── Template Method (Shared) ─── %%
+    class UpsertByUserIdService {
+        <<Abstract>>
+        #findByUserId(userId) Record
+        #updateByUserId(userId, data) Record
+        #mapCreateData(userId, data) CreateData
+        #createByUserId(data) Record
+        +upsert(userId, data) Record
     }
 
-    class ProfilesService {
+    %% ─── Domain Services ─── %%
+    class UsersService {
+        +getOrCreateUser(data) User
+        -normalizeEmail(email) String
+        -isObjectId(value) boolean
+    }
+
+    class ProfileService {
         +getProfileByUserId(userId) Profile
         +createOrUpdateProfile(userId, data) Profile
     }
@@ -96,36 +112,81 @@ classDiagram
     class PreferencesService {
         +getPreferences(userId) Preference
         +savePreferences(userId, data) Preference
-        -validateWeights(weights) boolean
     }
 
     class MatchingService {
-        +findMatchesForUser(userId) Array
-        -isEligible(userA, userB) boolean
-        -similarityScore(a, b) number
-        -booleanScore(a, b) number
-        -calculateScore(prefA, prefB) number
+        +findMatchesForUser(userId) RankedMatch[]
+        +assertOnboardingCompleted(userId) void
     }
 
     class DiscoveryService {
-        +getDiscoveryFeed(userId) Array
-        +swipeUser(fromId, toId, action) Object
-        -generateTags(profile, pref) Array
+        +getDiscoveryFeed(userId) DiscoveryProfile[]
+        +swipeUser(fromId, toId, action) SwipeResult
+        -generateTags(profile, pref) String[]
     }
 
     class MatchesService {
-        +checkAndCreateMatch(fromId, toId) Object
-        +getMyMatches(userId) Array
-        -generateMatchTags(profile, pref) Array
+        +checkAndCreateMatch(fromId, toId) MatchCheckResult
+        +getMyMatches(userId) EnrichedMatch[]
+        -generateMatchTags(profile, pref) String[]
     }
 
     class ChatService {
         +getOrCreateConversation(matchId) Conversation
-        +getMessages(conversationId) Array
+        +getMessages(conversationId) Message[]
         +sendMessage(convoId, senderId, content) Message
         +validateUserInMatch(matchId, userId) boolean
     }
 
+    %% ─── Strategy Pattern: Matching ─── %%
+    class EligibilityStrategy {
+        <<Interface>>
+        +isEligible(userA, userB) boolean
+    }
+    class DefaultEligibilityStrategy {
+        +isEligible(userA, userB) boolean
+    }
+
+    class ScoringStrategy {
+        <<Interface>>
+        +calculateScore(prefA, prefB) number
+    }
+    class DefaultScoringStrategy {
+        +calculateScore(prefA, prefB) number
+        -similarityScore(a, b) number
+        -booleanScore(a, b) number
+    }
+
+    %% ─── Strategy + Factory: Auth ─── %%
+    class AuthStrategyFactory {
+        +createEmailStrategy(intent) EmailAuthStrategy
+        +createOAuthStrategy(provider) OAuthAuthorizationStrategy
+    }
+
+    class EmailAuthStrategy {
+        <<Interface>>
+        +execute(credentials) AuthSession
+    }
+    class EmailSignUpStrategy {
+        +execute(credentials) AuthSession
+    }
+    class EmailSignInStrategy {
+        +execute(credentials) AuthSession
+    }
+
+    class OAuthAuthorizationStrategy {
+        <<Interface>>
+        +getAuthorizationUrl() String
+        +completeAuthorization(code, state) Object
+        +consumeExchangeCode(code) AuthSession
+    }
+    class GoogleOAuthStrategy {
+        +getAuthorizationUrl() String
+        +completeAuthorization(code, state) Object
+        +consumeExchangeCode(code) AuthSession
+    }
+
+    %% ─── Infrastructure ─── %%
     class PrismaClient {
         <<Singleton>>
         +user
@@ -137,30 +198,48 @@ classDiagram
         +message
     }
 
+    %% ─── Frontend State ─── %%
     class ReduxStore {
         <<Singleton>>
         +AuthSlice auth
-        +OnboardingSlice onboarding
-        +DiscoverySlice discovery
-        +MatchesSlice matches
-        +ChatSlice chat
-        +PreferencesSlice preferences
+        +ProfileSlice profile
     }
 
-    User "1" -- "0..1" Profile : has
+    %% ─── Entity Relationships ─── %%
+    User "1" -- "0..1" Profile : owns
     User "1" -- "0..1" Preference : sets
     User "1" -- "*" Swipe : performs
-    Match "1" -- "0..1" Conversation : owns
+    Match "1" -- "0..1" Conversation : has
     Conversation "1" -- "*" Message : contains
 
+    %% ─── Template Method ─── %%
+    ProfileService --> UpsertByUserIdService : delegates upsert
+    PreferencesService --> UpsertByUserIdService : delegates upsert
+
+    %% ─── Strategy: Matching ─── %%
+    MatchingService --> EligibilityStrategy : delegates
+    MatchingService --> ScoringStrategy : delegates
+    DefaultEligibilityStrategy ..|> EligibilityStrategy
+    DefaultScoringStrategy ..|> ScoringStrategy
+
+    %% ─── Strategy + Factory: Auth ─── %%
+    AuthStrategyFactory --> EmailAuthStrategy : creates
+    AuthStrategyFactory --> OAuthAuthorizationStrategy : creates
+    EmailSignUpStrategy ..|> EmailAuthStrategy
+    EmailSignInStrategy ..|> EmailAuthStrategy
+    GoogleOAuthStrategy ..|> OAuthAuthorizationStrategy
+
+    %% ─── Service Dependencies ─── %%
+    DiscoveryService --> MatchingService : uses findMatchesForUser
+    DiscoveryService --> MatchesService : uses checkAndCreateMatch
+    MatchesService --> MatchingService : uses findMatchesForUser
+
+    %% ─── Prisma Access ─── %%
     UsersService --> PrismaClient : queries
-    ProfilesService --> PrismaClient : queries
+    ProfileService --> PrismaClient : queries
     PreferencesService --> PrismaClient : queries
     MatchingService --> PrismaClient : queries
     DiscoveryService --> PrismaClient : queries
     MatchesService --> PrismaClient : queries
     ChatService --> PrismaClient : queries
-
-    DiscoveryService --> MatchingService : uses findMatchesForUser
-    DiscoveryService --> MatchesService : uses checkAndCreateMatch
 ```
