@@ -14,6 +14,18 @@ Flately helps users find compatible roommates through guided onboarding, weighte
 
 ---
 
+## The Team
+
+The success of Flately is attributed to a highly coordinated and specialized team:
+
+- **Mitul Bhatia**: Team Lead — Coordinated the entire project lifecycle and managed cross-module integrations.
+- **Hardik Maheshwari**: Deployment & User Flow Lead — Spearheaded the deployment architecture and orchestrated the complete user journey.
+- **Ajeesh Amreet**: Recommendation & Chat Engineer — Architected the core matching engine and implemented the live Socket.IO-based chat features.
+- **Akshat Chauhan**: Database Lead — Designed the Entity-Relationship models and managed the MongoDB Atlas integration.
+- **Suryansh Singh**: Strategic Lead, UI & Documentation Manager — Designed the minimalist UI, managed all structural diagrams, authored the core architectural reports, and guided strategic direction.
+
+---
+
 ## Product Summary
 
 Flately solves a practical housing pain point: roommate decisions are high-risk and usually made with low-quality context.

@@ -1,0 +1,121 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\definecolor{primary}{RGB}{0, 82, 204}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Flately - System Design \& Architecture Report},
+}
+
+\titleformat{\section}{\Large\bfseries\color{primary}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\title{
+    \vspace{2cm}
+    \textbf{\Huge Flately}\\[0.5cm]
+    \Large System Design \& Architecture Report\\
+    \vspace{1cm}
+}
+\author{
+    Mitul Bhatia \and Hardik Maheshwari \and Ajeesh Amreet \\ \and Akshat Chauhan \and Suryansh Singh
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Executive Summary}
+Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React~19, Node.js~22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
+
+\section{Team Formation \& Roles}
+The success of Flately is attributed to a highly coordinated and specialized team of system design developers. Each member took ownership of critical architectural domains:
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Mitul Bhatia -- Team Lead:} Coordinated the entire project lifecycle, ensuring seamless integration between backend and frontend modules, and maintaining the core vision of the application.
+    \item \textbf{Hardik Maheshwari -- Deployment \& User Flow Lead:} Spearheaded the deployment architecture and orchestrated the complete user journey, ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
+    \item \textbf{Ajeesh Amreet -- Recommendation \& Chat Engineer:} Architected the core matching engine (recommendation system) and implemented the live Socket.IO-based chat features, handling realtime concurrent connections flawlessly.
+    \item \textbf{Akshat Chauhan -- Database Lead \& MongoDB Manager:} Designed the intricate Entity-Relationship models and managed the MongoDB Atlas integration via Prisma, optimizing read/write queries for the matching logic.
+    \item \textbf{Suryansh Singh -- Strategic Lead, UI \& Documentation Manager:} Drove the strategic direction of the app, designed the minimalist and intuitive UI, managed all class/sequence diagrams, and authored the comprehensive project reports.
+\end{itemize}
+
+\section{Architectural Overview}
+Flately adopts a clear, modular architecture following a Controller-Service-ORM pattern. The backend ensures strict single-responsibility boundaries for every feature group (Auth, Discovery, Matches, Chat, Preferences, Profiles).
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Client (Browser):} React~19, Redux Toolkit, Vite~7, TailwindCSS~v4, Socket.IO Client.
+    \item \textbf{Backend Server:} Express~5, TypeScript, Socket.IO, Prisma ORM, JWT Middleware.
+    \item \textbf{Database:} MongoDB Atlas.
+\end{itemize}
+
+Real-time communication for live chatting is handled via WebSockets (Socket.IO), which bypass standard REST polling overhead, providing an instant messaging experience.
+
+\section{SOLID Principles at the Core}
+To ensure long-term maintainability, our team enforced strict adherence to SOLID principles:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Single Responsibility Principle (SRP):} Feature groups are cleanly broken into Route $\rightarrow$ Controller $\rightarrow$ Service. Transports in the frontend isolate networking logic from UI components.
+    \item \textbf{Open/Closed Principle (OCP):} New match eligibility parameters or scoring engines can be added by creating new Strategy classes without modifying the core MatchingService logic.
+    \item \textbf{Liskov Substitution Principle (LSP):} Concrete profile and preference upsert strategies seamlessly substitute their abstract Template Method base (\texttt{UpsertByUserIdService}).
+    \item \textbf{Interface Segregation Principle (ISP):} Small, highly focused interfaces like \texttt{EligibilityStrategy} and \texttt{ScoringStrategy} keep object dependencies minimal and isolated.
+    \item \textbf{Dependency Inversion Principle (DIP):} High-level matching components depend solely on Strategy interfaces. Dependency injection bags are consistently passed into controllers and services.
+\end{itemize}
+
+\section{Implemented Design Patterns}
+Flately relies on industry-standard Gang of Four (GoF) System Design patterns, verifying that our theoretical knowledge is properly applied to production-grade software:
+
+\subsection{Creational Patterns}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Factory Method:} Used extensively in the Authentication flows. \texttt{AuthStrategyFactory}, \texttt{DefaultEmailAuthStrategyFactory}, and \texttt{DefaultOAuthAuthorizationStrategyFactory} centralize the creation of precise authentication strategies without tightly coupling the caller to specific configurations.
+    \item \textbf{Singleton:} Applied broadly for system-wide module instances like Service Singletons, API Transport clients, and Socket connections. A lazy singleton Prisma client wrapper prevents premature database connections.
+\end{itemize}
+
+\subsection{Structural Patterns}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Adapter:} The \texttt{HttpClientAdapter} adapts the frontend application's arbitrary network requests to standard Web Fetch APIs via \texttt{FetchRequestStrategy}. Domain-focused Transport classes adapt these raw API contracts into concrete business workflows.
+    \item \textbf{Proxy:} Flately utilizes a JavaScript \texttt{Proxy} for \texttt{PrismaClient} to lazily instantiate the database client only upon the first actual property access, optimizing cold starts.
+    \item \textbf{Facade:} Controllers and broad services export clean, unified API contracts while hiding complex downstream dependency orchestration internally (e.g., \texttt{DiscoveryService}, \texttt{CloudinaryService}).
+\end{itemize}
+
+\subsection{Behavioral Patterns}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Strategy:} Heavily anchors Flately's core algorithms.
+    \begin{itemize}
+        \item \texttt{EligibilityStrategy} \& \texttt{ScoringStrategy}: Drive the weighted recommendation engine.
+        \item \texttt{AuthContinuationStrategy}: Decides post-authentication routing routes dynamically (\texttt{QuestionnaireSourceStrategy}, \texttt{SignupDefaultStrategy}, etc.).
+        \item \texttt{RequestStrategy}: Abstracts the underlying network execution mechanism in the client.
+    \end{itemize}
+    \item \textbf{Template Method:} The \texttt{UpsertByUserIdService} abstracts the invariant algorithm for sequence database upserts, allowing \texttt{ProfileUpsertService} and \texttt{PreferenceUpsertService} to define domain-specific variable steps like parameter mapping.
+    \item \textbf{Observer:} Central to the realtime notification and messaging sub-system. Socket.IO Publisher-Subscriber events (\texttt{socket.on(...)}, \texttt{io.emit(...)}) combined with Redux state subscriptions create a robust reactive architecture.
+\end{itemize}
+
+\section{The Matching Algorithm (Recommendation System)}
+Engineered by Ajeesh Amreet, the custom matching recommendation engine operates in two precise phases to ensure high-quality roommate suggestions:
+\begin{enumerate}
+    \item \textbf{Eligibility Filter (Hard Constraints):} Validates non-negotiable criteria such as exact city matching, overlapping financial budget intervals, and mutual gender compatibility.
+    \item \textbf{Compatibility Scoring Engine:} Calculates detailed similarity equations based on 1--5 scales (Cleanliness, Social Level, Sleep Schedule) and boolean data (Smoking, Drinking). This ensures deterministic sub-scores that bubble up to an aggregate 0--100\% match probability index using deterministic tie-ordering.
+\end{enumerate}
+
+\section{Conclusion}
+The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration. By effectively combining modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
+
+\end{document}

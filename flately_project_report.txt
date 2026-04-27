@@ -3,92 +3,80 @@ FLATELY - SYSTEM DESIGN & ARCHITECTURE REPORT
 ================================================================================
 
 EXECUTIVE SUMMARY
-Flately is a full-stack, real-time roommate-matching platform. 
-Built on a robust technology stack (React 19, Node.js 22.x, Express, MongoDB, Socket.IO), 
-Flately leverages advanced system design principles to ensure high performance, 
-maintainability, and scalability. This report serves as a detailed dossier of the 
-design patterns and architectural decisions implemented in the Flately codebase.
+Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React 19, Node.js 22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
 
 --------------------------------------------------------------------------------
-1. ARCHITECTURAL OVERVIEW
+1. TEAM FORMATION & ROLES
 --------------------------------------------------------------------------------
-Flately adopts a clear, modular architecture following a Controller-Service-ORM 
-pattern. 
+The success of Flately is attributed to a highly coordinated and specialized team of system design developers. Each member took ownership of critical architectural domains:
+
+* Mitul Bhatia - Team Lead
+  Coordinated the entire project lifecycle, ensuring seamless integration between backend and frontend modules, and maintaining the core vision of the application.
+
+* Hardik Maheshwari - Deployment & User Flow Lead
+  Spearheaded the deployment architecture and orchestrated the complete user journey, ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
+
+* Ajeesh Amreet - Recommendation & Chat Engineer
+  Architected the core matching engine (recommendation system) and implemented the live Socket.IO-based chat features, handling realtime concurrent connections flawlessly.
+
+* Akshat Chauhan - Database Lead & MongoDB Manager
+  Designed the intricate Entity-Relationship models and managed the MongoDB Atlas integration via Prisma, optimizing read/write queries for the matching logic.
+
+* Suryansh Singh - Strategic Lead, UI & Documentation Manager
+  Drove the strategic direction of the app, designed the minimalist and intuitive UI, managed all class/sequence diagrams, and authored the comprehensive project reports.
+
+--------------------------------------------------------------------------------
+2. ARCHITECTURAL OVERVIEW
+--------------------------------------------------------------------------------
+Flately adopts a clear, modular architecture following a Controller-Service-ORM pattern. The backend ensures strict single-responsibility boundaries for every feature group (Auth, Discovery, Matches, Chat, Preferences, Profiles).
 
 CLIENT (Browser): React 19, Redux Toolkit, Vite 7, TailwindCSS v4, Socket.IO Client
 BACKEND SERVER: Express 5, TypeScript, Socket.IO, Prisma ORM, JWT Middleware
 DATABASE: MongoDB Atlas
 
-The backend ensures single-responsibility boundaries for every feature group (Auth, 
-Discovery, Matches, Chat, Preferences, Profiles). Real-time communication for 
-live chatting is handled via WebSockets (Socket.IO).
+Real-time communication for live chatting is handled via WebSockets (Socket.IO), which bypass standard REST polling overhead, providing an instant messaging experience.
 
 --------------------------------------------------------------------------------
-2. SOLID PRINCIPLES AT THE CORE
+3. SOLID PRINCIPLES AT THE CORE
 --------------------------------------------------------------------------------
-* Single Responsibility Principle (SRP): Feature groups are cleanly broken into 
-  Route -> Controller -> Service. Transports in the frontend isolate networking.
-* Open/Closed Principle (OCP): New match eligibility parameters or scoring engines 
-  can be added by creating new Strategy classes without touching the core Matching 
-  service logic.
-* Liskov Substitution Principle (LSP): Concrete profile/preference upsert 
-  strategies seamlessly replace their abstract Template Method base.
-* Interface Segregation Principle (ISP): Small, focused interfaces like 
-  `EligibilityStrategy` and `ScoringStrategy` keep object dependencies minimal.
-* Dependency Inversion Principle (DIP): Components depend on Strategy interfaces, 
-  and dependency injection bags are passed into controllers and services.
+To ensure long-term maintainability, our team enforced strict adherence to SOLID principles:
+* Single Responsibility Principle (SRP): Feature groups are cleanly broken into Route -> Controller -> Service. Transports in the frontend isolate networking logic from UI components.
+* Open/Closed Principle (OCP): New match eligibility parameters or scoring engines can be added by creating new Strategy classes without modifying the core MatchingService logic.
+* Liskov Substitution Principle (LSP): Concrete profile and preference upsert strategies seamlessly substitute their abstract Template Method base (`UpsertByUserIdService`).
+* Interface Segregation Principle (ISP): Small, highly focused interfaces like `EligibilityStrategy` and `ScoringStrategy` keep object dependencies minimal and isolated.
+* Dependency Inversion Principle (DIP): High-level matching components depend solely on Strategy interfaces. Dependency injection bags are consistently passed into controllers and services.
 
 --------------------------------------------------------------------------------
-3. IMPLEMENTED DESIGN PATTERNS
+4. IMPLEMENTED DESIGN PATTERNS
 --------------------------------------------------------------------------------
-Flately relies on industry-standard GoF System Design patterns:
+Flately relies on industry-standard Gang of Four (GoF) System Design patterns, verifying that our theoretical knowledge is properly applied to production-grade software:
 
 A. CREATIONAL PATTERNS
-* Factory Method: Used extensively in the Authentication flows. 
-  `AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, and 
-  `DefaultOAuthAuthorizationStrategyFactory` centralize the creation of precise 
-  authentication strategies without coupling the client to specific configurations.
-* Singleton: Applied broadly for system-wide module instances (Service Singletons, 
-  Transports, API client). A lazy singleton Prisma client wrapper prevents 
-  premature database connections.
+* Factory Method: Used extensively in the Authentication flows. `AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, and `DefaultOAuthAuthorizationStrategyFactory` centralize the creation of precise authentication strategies without tightly coupling the caller to specific configurations.
+* Singleton: Applied broadly for system-wide module instances like Service Singletons, API Transport clients, and Socket connections. A lazy singleton Prisma client wrapper prevents premature database connections.
 
 B. STRUCTURAL PATTERNS
-* Adapter: The `HttpClientAdapter` adapts the frontend application's network 
-  requests to standard Web Fetch APIs via `FetchRequestStrategy`, while domain-
-  focused Transport classes adapt these API contracts to business workflows.
-* Proxy: Flately utilizes a JavaScript `Proxy` for `PrismaClient` to lazily 
-  instantiate the database client only upon first actual property access.
-* Facade: Controllers and broad services export clean, unified API contracts while 
-  orchestrating complex downstream dependencies internally (e.g., `DiscoveryService`, 
-  `CloudinaryService`).
+* Adapter: The `HttpClientAdapter` adapts the frontend application's arbitrary network requests to standard Web Fetch APIs via `FetchRequestStrategy`. Domain-focused Transport classes adapt these raw API contracts into concrete business workflows.
+* Proxy: Flately utilizes a JavaScript `Proxy` for `PrismaClient` to lazily instantiate the database client only upon the first actual property access, optimizing cold starts.
+* Facade: Controllers and broad services export clean, unified API contracts while hiding complex downstream dependency orchestration internally (e.g., `DiscoveryService`, `CloudinaryService`).
 
 C. BEHAVIORAL PATTERNS
-* Strategy: heavily anchors Flately's core algorithms.
-  - `EligibilityStrategy` & `ScoringStrategy`: Drive the weighted matching engine.
-  - `AuthContinuationStrategy`: Decides post-authentication routing routes 
-    (`QuestionnaireSourceStrategy`, `SignupDefaultStrategy`, etc.).
-  - `RequestStrategy`: Abstracts network execution mechanism in the client.
-* Template Method: The `UpsertByUserIdService` abstracts the invariant algorithm 
-  for database upserts, allowing `ProfileUpsertService` and 
-  `PreferenceUpsertService` to define domain-specific variable steps.
-* Observer: Central to the realtime notification and messaging sub-system via 
-  Socket.IO Publisher-Subscriber events (`socket.on(...)`, `io.emit(...)`) combined 
-  with Redux state subscriptions.
+* Strategy: Heavily anchors Flately's core algorithms.
+  - `EligibilityStrategy` & `ScoringStrategy`: Drive the weighted recommendation engine.
+  - `AuthContinuationStrategy`: Decides post-authentication routing routes dynamically (`QuestionnaireSourceStrategy`, `SignupDefaultStrategy`, etc.).
+  - `RequestStrategy`: Abstracts the underlying network execution mechanism in the client.
+* Template Method: The `UpsertByUserIdService` abstracts the invariant algorithm for sequence database upserts, allowing `ProfileUpsertService` and `PreferenceUpsertService` to define domain-specific variable steps like parameter mapping.
+* Observer: Central to the realtime notification and messaging sub-system. Socket.IO Publisher-Subscriber events (`socket.on(...)`, `io.emit(...)`) combined with Redux state subscriptions create a robust reactive architecture.
 
 --------------------------------------------------------------------------------
-4. THE MATCHING ALGORITHM - A STRATEGY IN ACTION
+5. THE MATCHING ALGORITHM (RECOMMENDATION SYSTEM)
 --------------------------------------------------------------------------------
-Our custom matching engine operates in two phases:
-1. Eligibility Filter (Hard Constraints): Validates city matching, overlapping budget 
-   intervals, and gender compatibility.
-2. Compatibility Scoring Engine: Weighs and calculates similarity equations based 
-   on 1-5 scales (Cleanliness, Social Level) and boolean data (Smoking, Drinking), 
-   ensuring deterministic sub-scores that bubble up to an aggregate 0-100% 
-   match probability index using deterministic tie-ordering.
+Engineered by Ajeesh Amreet, the custom matching recommendation engine operates in two precise phases to ensure high-quality roommate suggestions:
+1. Eligibility Filter (Hard Constraints): Validates non-negotiable criteria such as exact city matching, overlapping financial budget intervals, and mutual gender compatibility. 
+2. Compatibility Scoring Engine: Calculates detailed similarity equations based on 1-5 scales (Cleanliness, Social Level, Sleep Schedule) and boolean data (Smoking, Drinking). This ensures deterministic sub-scores that bubble up to an aggregate 0-100% match probability index using deterministic tie-ordering.
 
+--------------------------------------------------------------------------------
 CONCLUSION
-The Flately platform is a showcase of sophisticated system-level engineering. 
-By effectively combining modularity with deeply integrated GoF design patterns 
-and SOLID compliance, Flately easily scales, resists regression testing errors, 
-and delivers a performant, realtime user experience.
+--------------------------------------------------------------------------------
+The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration. By effectively combining modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
 ================================================================================
