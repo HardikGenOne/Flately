@@ -28,7 +28,8 @@
 \title{
     \vspace{2cm}
     \textbf{\Huge Flately}\\[0.5cm]
-    \Large System Design \& Architecture Report\\
+    \Large System Design, Business Analysis \& Architecture Report\\[1cm]
+    \large \textbf{Newton School of Technology}\\
     \vspace{1cm}
 }
 \author{
@@ -46,14 +47,30 @@
 \newpage
 
 \section{Executive Summary}
-Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React~19, Node.js~22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
+Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React~19, Node.js~22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the business analysis, design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
+
+\section{Business Analysis \& Value Proposition}
+
+\subsection{Problem Statement (The Pain Point)}
+The current roommate matching landscape is fraught with inefficiencies, information asymmetry, and high personal risk. Legacy platforms rely heavily on superficial filtering (e.g., location and budget), ignoring the crucial daily lifestyle factors that dictate roommate compatibility. This results in high turnover rates, living disputes, and suboptimal housing arrangements.
+
+\subsection{The Flately Solution (Value Proposition)}
+Flately introduces an algorithmic, data-driven approach to roommate matching. Rather than depending on unstructured text bios, Flately enforces structured profiling:
+\begin{enumerate}
+    \item \textbf{Granular Lifestyle Profiling:} Captures objective data on cleanliness, sleep schedules, and smoking/drinking habits.
+    \item \textbf{Weighted Preference Scoring:} Users assign weights to the metrics that matter most to them, preventing arbitrary matchmaking.
+    \item \textbf{High-Signal Conversations:} Direct real-time chat is gated behind mutual interest (swipe matches), drastically reducing spam and enhancing the signal-to-noise ratio in communication.
+\end{enumerate}
+
+\subsection{Target Market \& Impact}
+Primarily targeting college students and young professionals navigating high-rent urban centers, Flately reduces "time-to-match" and significantly increases long-term roommate retention by establishing baseline compatibility before any direct communication occurs.
 
 \section{Team Formation \& Roles}
-The success of Flately is attributed to a highly coordinated and specialized team of system design developers. Each member took ownership of critical architectural domains:
+The success of Flately is attributed to a highly coordinated and specialized team of system design developers from the \textbf{Newton School of Technology}. Each member took ownership of critical architectural domains:
 
 \begin{itemize}[leftmargin=*]
     \item \textbf{Mitul Bhatia -- Team Lead:} Coordinated the entire project lifecycle, ensuring seamless integration between backend and frontend modules, and maintaining the core vision of the application.
-    \item \textbf{Hardik Maheshwari -- Deployment \& User Flow Lead:} Spearheaded the deployment architecture and orchestrated the complete user journey, ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
+    \item \textbf{Hardik Maheshwari -- Deployment \& User Flow Lead:} Spearheaded the deployment architecture and orchestrated the complete ``Hero User Journey,'' ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
     \item \textbf{Ajeesh Amreet -- Recommendation \& Chat Engineer:} Architected the core matching engine (recommendation system) and implemented the live Socket.IO-based chat features, handling realtime concurrent connections flawlessly.
     \item \textbf{Akshat Chauhan -- Database Lead \& MongoDB Manager:} Designed the intricate Entity-Relationship models and managed the MongoDB Atlas integration via Prisma, optimizing read/write queries for the matching logic.
     \item \textbf{Suryansh Singh -- Strategic Lead, UI \& Documentation Manager:} Drove the strategic direction of the app, designed the minimalist and intuitive UI, managed all class/sequence diagrams, and authored the comprehensive project reports.
@@ -116,6 +133,6 @@ Engineered by Ajeesh Amreet, the custom matching recommendation engine operates 
 \end{enumerate}
 
 \section{Conclusion}
-The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration. By effectively combining modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
+The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration born from the \textbf{Newton School of Technology}. By effectively combining rigorous business analysis and modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
 
 \end{document}

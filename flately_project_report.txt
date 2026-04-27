@@ -1,20 +1,36 @@
 ================================================================================
 FLATELY - SYSTEM DESIGN & ARCHITECTURE REPORT
 ================================================================================
+Institution: Newton School of Technology
 
 EXECUTIVE SUMMARY
-Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React 19, Node.js 22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
+Flately is a full-stack, real-time roommate-matching platform engineered to solve the practical housing pain point: roommate decisions are high-risk and usually made with low-quality context. Built on a robust technology stack (React 19, Node.js 22.x, Express, MongoDB, Socket.IO), Flately leverages advanced system design principles to ensure high performance, maintainability, and scalability. This report serves as a detailed dossier of the business analysis, design patterns, architectural decisions, and collaborative team effort implemented in the Flately codebase.
 
 --------------------------------------------------------------------------------
-1. TEAM FORMATION & ROLES
+1. BUSINESS ANALYSIS & VALUE PROPOSITION
 --------------------------------------------------------------------------------
-The success of Flately is attributed to a highly coordinated and specialized team of system design developers. Each member took ownership of critical architectural domains:
+A. Problem Statement (The Pain Point)
+The current roommate matching landscape is fraught with inefficiencies, information asymmetry, and high personal risk. Legacy platforms rely heavily on superficial filtering (e.g., location and budget), ignoring the crucial daily lifestyle factors that dictate roommate compatibility. This results in high turnover rates, living disputes, and suboptimal housing arrangements.
+
+B. The Flately Solution (Value Proposition)
+Flately introduces an algorithmic, data-driven approach to roommate matching. Rather than depending on unstructured text bios, Flately enforces structured profiling:
+1. Granular Lifestyle Profiling: Captures objective data on cleanliness, sleep schedules, and smoking/drinking habits.
+2. Weighted Preference Scoring: Users assign weights to the metrics that matter most to them, preventing arbitrary matchmaking.
+3. High-Signal Conversations: Direct real-time chat is gated behind mutual interest (swipe matches), drastically reducing spam and enhancing the signal-to-noise ratio in communication.
+
+C. Target Market & Impact
+Primarily targeting college students and young professionals navigating high-rent urban centers, Flately reduces "time-to-match" and significantly increases long-term roommate retention by establishing baseline compatibility before any direct communication occurs.
+
+--------------------------------------------------------------------------------
+2. TEAM FORMATION & ROLES
+--------------------------------------------------------------------------------
+The success of Flately is attributed to a highly coordinated and specialized team of system design developers from Newton School of Technology. Each member took ownership of critical architectural domains:
 
 * Mitul Bhatia - Team Lead
   Coordinated the entire project lifecycle, ensuring seamless integration between backend and frontend modules, and maintaining the core vision of the application.
 
 * Hardik Maheshwari - Deployment & User Flow Lead
-  Spearheaded the deployment architecture and orchestrated the complete user journey, ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
+  Spearheaded the deployment architecture and orchestrated the complete "Hero User Journey," ensuring seamless transitions from onboarding to the dashboard and implementing strict route guards.
 
 * Ajeesh Amreet - Recommendation & Chat Engineer
   Architected the core matching engine (recommendation system) and implemented the live Socket.IO-based chat features, handling realtime concurrent connections flawlessly.
@@ -26,7 +42,7 @@ The success of Flately is attributed to a highly coordinated and specialized tea
   Drove the strategic direction of the app, designed the minimalist and intuitive UI, managed all class/sequence diagrams, and authored the comprehensive project reports.
 
 --------------------------------------------------------------------------------
-2. ARCHITECTURAL OVERVIEW
+3. ARCHITECTURAL OVERVIEW
 --------------------------------------------------------------------------------
 Flately adopts a clear, modular architecture following a Controller-Service-ORM pattern. The backend ensures strict single-responsibility boundaries for every feature group (Auth, Discovery, Matches, Chat, Preferences, Profiles).
 
@@ -37,7 +53,7 @@ DATABASE: MongoDB Atlas
 Real-time communication for live chatting is handled via WebSockets (Socket.IO), which bypass standard REST polling overhead, providing an instant messaging experience.
 
 --------------------------------------------------------------------------------
-3. SOLID PRINCIPLES AT THE CORE
+4. SOLID PRINCIPLES AT THE CORE
 --------------------------------------------------------------------------------
 To ensure long-term maintainability, our team enforced strict adherence to SOLID principles:
 * Single Responsibility Principle (SRP): Feature groups are cleanly broken into Route -> Controller -> Service. Transports in the frontend isolate networking logic from UI components.
@@ -47,7 +63,7 @@ To ensure long-term maintainability, our team enforced strict adherence to SOLID
 * Dependency Inversion Principle (DIP): High-level matching components depend solely on Strategy interfaces. Dependency injection bags are consistently passed into controllers and services.
 
 --------------------------------------------------------------------------------
-4. IMPLEMENTED DESIGN PATTERNS
+5. IMPLEMENTED DESIGN PATTERNS
 --------------------------------------------------------------------------------
 Flately relies on industry-standard Gang of Four (GoF) System Design patterns, verifying that our theoretical knowledge is properly applied to production-grade software:
 
@@ -69,7 +85,7 @@ C. BEHAVIORAL PATTERNS
 * Observer: Central to the realtime notification and messaging sub-system. Socket.IO Publisher-Subscriber events (`socket.on(...)`, `io.emit(...)`) combined with Redux state subscriptions create a robust reactive architecture.
 
 --------------------------------------------------------------------------------
-5. THE MATCHING ALGORITHM (RECOMMENDATION SYSTEM)
+6. THE MATCHING ALGORITHM (RECOMMENDATION SYSTEM)
 --------------------------------------------------------------------------------
 Engineered by Ajeesh Amreet, the custom matching recommendation engine operates in two precise phases to ensure high-quality roommate suggestions:
 1. Eligibility Filter (Hard Constraints): Validates non-negotiable criteria such as exact city matching, overlapping financial budget intervals, and mutual gender compatibility. 
@@ -78,5 +94,5 @@ Engineered by Ajeesh Amreet, the custom matching recommendation engine operates 
 --------------------------------------------------------------------------------
 CONCLUSION
 --------------------------------------------------------------------------------
-The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration. By effectively combining modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
+The Flately platform is a showcase of sophisticated system-level engineering and strong team collaboration born from Newton School of Technology. By effectively combining rigorous business analysis and modularity with deeply integrated GoF design patterns and SOLID compliance, the Flately team has successfully delivered a scalable, robust, and highly performant real-time application.
 ================================================================================
