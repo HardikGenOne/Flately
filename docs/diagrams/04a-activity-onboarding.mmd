@@ -1,0 +1,38 @@
+stateDiagram-v2
+    [*] --> LandingPage
+
+    LandingPage --> AuthChoice : Click Get Started
+    AuthChoice --> GoogleOAuth : Google Login
+    AuthChoice --> EmailAuth : Email Login/Signup
+    
+    GoogleOAuth --> AuthSync : OAuth Callback
+    EmailAuth --> AuthSync : Auth Success
+
+    state AuthSync {
+        [*] --> CheckUserRecord
+        CheckUserRecord --> DispatchSetAuth : User Ready
+        DispatchSetAuth --> FetchProfile : GET /profiles/me
+    }
+
+    AuthSync --> CheckOnboarding : Profile loaded
+    CheckOnboarding --> OnboardingWizard : onboardingCompleted=false
+    CheckOnboarding --> Dashboard : onboardingCompleted=true
+
+    state OnboardingWizard {
+        [*] --> Step1_Identity
+        Step1_Identity --> Step2_Housing : Next
+        Step2_Housing --> Step3_Budget : Next
+        Step3_Budget --> Step4_Lifestyle : Next
+        Step4_Lifestyle --> Step5_Priorities : Next
+        Step5_Priorities --> Step6_Review : Next
+        Step6_Review --> SubmitOnboarding : Finish
+    }
+
+    state SubmitOnboarding {
+        [*] --> SaveProfile
+        SaveProfile --> SavePreferences : POST /profiles/me
+        SavePreferences --> NavigateToDashboard : POST /preferences/me
+    }
+
+    OnboardingWizard --> Dashboard
+    Dashboard --> [*]

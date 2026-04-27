@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant B as Browser
+    participant G as Google OAuth
+    participant AS as Auth Controller
+    participant ST as Auth Strategy Factory
+    participant GS as Google OAuth Strategy
+    participant DB as Prisma / MongoDB
+
+    B->>G: Authorize (Email/Profile scope)
+    G-->>B: Redirect with Code + State
+    B->>AS: GET /auth/google/callback?code=...
+    AS->>ST: createOAuthStrategy("google")
+    ST->>GS: completeAuthorization(code, state)
+    
+    GS->>G: Exchange Code for Token
+    G-->>GS: Tokens + Profile (sub, email, name, pic)
+    
+    GS->>DB: prisma.user.findFirst({ googleId: profile.sub })
+    alt User exists
+        GS->>DB: prisma.user.update({ data: { name, picture } })
+    else New user
+        GS->>DB: prisma.user.create({ data: { email, googleId, ... } })
+    end
+    
+    GS-->>AS: Auth Session (JWT)
+    AS-->>B: HttpOnly Cookie / JSON Response

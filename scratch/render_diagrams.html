@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flately UML Diagrams</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #ffffff; font-family: 'Segoe UI', sans-serif; }
+  .diagram-section {
+    padding: 40px;
+    border-bottom: 3px solid #e5e7eb;
+    page-break-after: always;
+  }
+  .diagram-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #166534;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .diagram-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 28px;
+    font-family: monospace;
+  }
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+  }
+  .mermaid svg {
+    max-width: 100%;
+  }
+  #diagram-1 { background: #f0fdf4; }
+  #diagram-2 { background: #fefce8; }
+  #diagram-3 { background: #eff6ff; }
+  #diagram-4a { background: #fdf4ff; }
+  #diagram-4b { background: #fff7ed; }
+  #diagram-4c { background: #f0fdf4; }
+  #diagram-5a { background: #eff6ff; }
+  #diagram-5b { background: #f0fdf4; }
+  #diagram-5c { background: #fdf4ff; }
+  #diagram-5d { background: #fff7ed; }
+</style>
+</head>
+<body>
+
+<!-- ===================== 1. CLASS DIAGRAM ===================== -->
+<div class="diagram-section" id="diagram-1">
+  <div class="diagram-title">① Class Diagram — System Architecture</div>
+  <div class="diagram-subtitle">Services · Data Models · PrismaClient · ReduxStore</div>
+  <div class="mermaid">
+classDiagram
+    direction TB
+
+    class User {
+        +String id
+        +String auth0id
+        +String email
+        +String name
+        +String picture
+        +DateTime createdAt
+    }
+    class Profile {
+        +String id
+        +String userId
+        +String name
+        +Int age
+        +String gender
+        +String bio
+        +Array photos
+        +String city
+        +Boolean hasRoom
+        +String occupation
+        +String sleepSchedule
+        +Int noiseLevel
+        +String guestPolicy
+        +String smoking
+        +String pets
+        +Boolean onboardingCompleted
+        +DateTime createdAt
+        +DateTime updatedAt
+    }
+    class Preference {
+        +String id
+        +String userId
+        +String genderPreference
+        +Int minBudget
+        +Int maxBudget
+        +String city
+        +Int cleanliness
+        +Int sleepSchedule
+        +Boolean smoking
+        +Boolean drinking
+        +Boolean pets
+        +Int socialLevel
+        +Int weightCleanliness
+        +Int weightSleep
+        +Int weightHabits
+        +Int weightSocial
+    }
+    class Swipe {
+        +String id
+        +String fromUserId
+        +String toUserId
+        +String action
+        +DateTime createdAt
+    }
+    class Match {
+        +String id
+        +String userAId
+        +String userBId
+        +DateTime createdAt
+    }
+    class Conversation {
+        +String id
+        +String matchId
+        +DateTime createdAt
+    }
+    class Message {
+        +String id
+        +String conversationId
+        +String senderId
+        +String content
+        +DateTime createdAt
+    }
+    class UsersService {
+        +getOrCreateUser(data) User
+    }
+    class ProfilesService {
+        +getProfileByUserId(userId) Profile
+        +createOrUpdateProfile(userId, data) Profile
+    }
+    class PreferencesService {
+        +getPreferences(userId) Preference
+        +savePreferences(userId, data) Preference
+        -validateWeights(weights) Boolean
+    }
+    class MatchingService {
+        +findMatchesForUser(userId) Array
+        -isEligible(userA, userB) Boolean
+        -similarityScore(a, b, max) Number
+        -booleanScore(a, b) Number
+        -calculateScore(prefA, prefB) Number
+    }
+    class DiscoveryService {
+        +getDiscoveryFeed(userId) Array
+        +swipeUser(fromId, toId, action) Object
+        -generateTags(profile, pref) Array
+    }
+    class MatchesService {
+        +checkAndCreateMatch(fromId, toId) Object
+        +getMyMatches(userId) Array
+        -generateMatchTags(profile, pref) Array
+    }
+    class ChatService {
+        +getOrCreateConversation(matchId) Conversation
+        +getMessages(conversationId) Array
+        +sendMessage(convoId, senderId, content) Message
+        +validateUserInMatch(matchId, userId) Boolean
+    }
+    class PrismaClient {
+        <<Singleton>>
+        +user PrismaDelegate
+        +profile PrismaDelegate
+        +preference PrismaDelegate
+        +swipe PrismaDelegate
+        +match PrismaDelegate
+        +conversation PrismaDelegate
+        +message PrismaDelegate
+    }
+
+    User "1" --o "0..1" Profile : has
+    User "1" --o "0..1" Preference : sets
+    User "1" --o "*" Swipe : performs
+    Match "1" --o "0..1" Conversation : owns
+    Conversation "1" --o "*" Message : contains
+
+    UsersService ..> PrismaClient : queries
+    ProfilesService ..> PrismaClient : queries
+    PreferencesService ..> PrismaClient : queries
+    MatchingService ..> PrismaClient : queries
+    DiscoveryService ..> PrismaClient : queries
+    MatchesService ..> PrismaClient : queries
+    ChatService ..> PrismaClient : queries
+
+    DiscoveryService ..> MatchingService : calls findMatchesForUser
+    DiscoveryService ..> MatchesService : calls checkAndCreateMatch
+  </div>
+</div>
+
+<!-- ===================== 2. USE CASE ===================== -->
+<div class="diagram-section" id="diagram-2">
+  <div class="diagram-title">② Use Case Diagram</div>
+  <div class="diagram-subtitle">Actors: Guest · AuthenticatedUser · Auth0 · Socket.IO</div>
+  <div class="mermaid">
+graph LR
+    Guest((Guest))
+    AUser((Authenticated\nUser))
+    Auth0[/"Auth0 IdP"/]
+    SIO[/"Socket.IO\nServer"/]
+
+    subgraph Authentication
+        UC1[Login via Auth0]
+        UC2[Register via Auth0]
+        UC3[Auto-Sync User Record\nvia AuthSync]
+    end
+
+    subgraph Profile_Management
+        UC4[Complete 5-Step Onboarding]
+        UC5[View My Profile]
+        UC6[Update My Profile]
+    end
+
+    subgraph Preference_Management
+        UC7[Set Roommate Preferences]
+        UC8[Configure Matching Weights\nweights must sum to 100]
+    end
+
+    subgraph Discovery
+        UC9[Browse Discovery Feed]
+        UC10[Swipe Like]
+        UC11[Swipe Skip/Pass]
+        UC12[View Compatibility Score]
+        UC13[View Auto-Generated Tags]
+    end
+
+    subgraph Matching_Engine
+        UC14[Eligibility Filter\ncity + budget + gender]
+        UC15[Weighted Compatibility Score\ncleanliness+sleep+habits+social]
+        UC16[Detect Mutual Match\ncheck reverse swipe]
+    end
+
+    subgraph Matches
+        UC17[View My Matches]
+        UC18[View Match Detail]
+    end
+
+    subgraph Chat
+        UC19[Open Conversation\nGET /chat/:matchId]
+        UC20[Send Message\nsocket.emit send_message]
+        UC21[Receive Message\nsocket.on new_message]
+    end
+
+    Guest --> UC1
+    Guest --> UC2
+    UC1 --> Auth0
+    UC2 --> Auth0
+
+    AUser --> UC3
+    AUser --> UC4
+    AUser --> UC5
+    AUser --> UC6
+    AUser --> UC7
+    AUser --> UC8
+    AUser --> UC9
+    AUser --> UC10
+    AUser --> UC11
+    AUser --> UC17
+    AUser --> UC19
+    AUser --> UC20
+
+    UC9 -.->|includes| UC12
+    UC9 -.->|includes| UC13
+    UC10 -.->|triggers| UC14
+    UC10 -.->|triggers| UC15
+    UC10 -.->|triggers| UC16
+    UC11 -.->|triggers| UC14
+    UC17 -.->|extends| UC18
+
+    UC19 --> SIO
+    UC20 --> SIO
+    SIO --> UC21
+  </div>
+</div>
+
+<!-- ===================== 3. ERD ===================== -->
+<div class="diagram-section" id="diagram-3">
+  <div class="diagram-title">③ Entity-Relationship Diagram</div>
+  <div class="diagram-subtitle">MongoDB Atlas · Prisma ORM · 7 Collections</div>
+  <div class="mermaid">
+erDiagram
+    USER {
+        ObjectId id PK
+        String auth0id UK
+        String email UK
+        String name
+        String picture
+        DateTime createdAt
+    }
+    PROFILE {
+        ObjectId id PK
+        ObjectId userId FK
+        String name
+        Int age
+        String gender
+        String bio
+        StringArray photos
+        String city
+        Boolean hasRoom
+        String occupation
+        String sleepSchedule
+        Int noiseLevel
+        String guestPolicy
+        String smoking
+        String pets
+        Boolean onboardingCompleted
+        DateTime createdAt
+        DateTime updatedAt
+    }
+    PREFERENCE {
+        ObjectId id PK
+        ObjectId userId FK
+        String genderPreference
+        Int minBudget
+        Int maxBudget
+        String city
+        Int cleanliness
+        Int sleepSchedule
+        Boolean smoking
+        Boolean drinking
+        Boolean pets
+        Int socialLevel
+        Int weightCleanliness
+        Int weightSleep
+        Int weightHabits
+        Int weightSocial
+        DateTime createdAt
+        DateTime updatedAt
+    }
+    SWIPE {
+        ObjectId id PK
+        ObjectId fromUserId 
+        ObjectId toUserId 
+        String action
+        DateTime createdAt
+    }
+    MATCH {
+        ObjectId id PK
+        ObjectId userAId 
+        ObjectId userBId 
+        DateTime createdAt
+    }
+    CONVERSATION {
+        ObjectId id PK
+        ObjectId matchId UK
+        DateTime createdAt
+    }
+    MESSAGE {
+        ObjectId id PK
+        ObjectId conversationId FK
+        ObjectId senderId
+        String content
+        DateTime createdAt
+    }
+
+    USER ||--o| PROFILE : "explicit"
+    USER ||..o| PREFERENCE : "logical"
+    USER ||..o{ SWIPE : "logical"
+    USER ||..o{ MATCH : "logical"
+    MATCH ||..o| CONVERSATION : "logical"
+    CONVERSATION ||--o{ MESSAGE : "explicit"
+    USER ||..o{ MESSAGE : "logical"
+  </div>
+</div>
+
+<!-- ===================== 4a. ACTIVITY: ONBOARDING ===================== -->
+<div class="diagram-section" id="diagram-4a">
+  <div class="diagram-title">④a Activity Diagram — Registration &amp; Onboarding</div>
+  <div class="diagram-subtitle">Auth0 → AuthSync → UsersService → OnboardingWizard → Profiles + Preferences</div>
+  <div class="mermaid">
+flowchart TD
+    A([Start: Visit Landing Page]) --> B[Click Get Started Free]
+    B --> C[loginWithRedirect to Auth0]
+    C --> D[Auth0 Hosted Login Page]
+    D --> E{New or returning user?}
+    E -->|New| F[Register account]
+    E -->|Existing| G[Enter credentials]
+    F --> H[Auth0 issues access_token JWT RS256]
+    G --> H
+    H --> I[Redirect to app with token]
+    I --> J[AuthSync useEffect triggers]
+    J --> K[dispatch setAuth to Redux]
+    K --> L[POST /users/me with Bearer JWT]
+    L --> M[checkJwt validate against JWKS]
+    M --> N[attachUserId extract req.userId from payload.sub]
+    N --> O{User exists\nin MongoDB?}
+    O -->|No| P[prisma.user.create]
+    O -->|Yes| Q[prisma.user.findUnique]
+    P --> R[User record ready]
+    Q --> R
+    R --> S{onboardingCompleted\n= true?}
+    S -->|Yes| T[Navigate to Dashboard /app]
+    S -->|No| U[Navigate to /app/onboarding]
+
+    U --> V[Step 1: Basic Intel\ngender · age · occupation]
+    V --> W[Step 2: Location\ncity]
+    W --> X[Step 3: Budget\nminBudget · maxBudget]
+    X --> Y[Step 4: Habits\nsmoking · pets]
+    Y --> Z[Step 5: Review Summary]
+    Z --> AA[Submit Onboarding]
+    AA --> AB[POST /profiles/me\nsave profile data]
+    AB --> AC[POST /preferences/me\nweights default 25 each]
+    AC --> T
+    T --> AE([End])
+  </div>
+</div>
+
+<!-- ===================== 4b. ACTIVITY: DISCOVERY & SWIPE ===================== -->
+<div class="diagram-section" id="diagram-4b">
+  <div class="diagram-title">④b Activity Diagram — Discovery Feed &amp; Swipe</div>
+  <div class="diagram-subtitle">DiscoveryService → MatchingService → Eligibility → Score → Swipe → Match</div>
+  <div class="mermaid">
+flowchart TD
+    A([User opens Discovery Page]) --> B[GET /discovery/feed]
+    B --> C[prisma.swipe.findMany fromUserId\nbuild excludedUserIds list]
+    C --> D[findMatchesForUser userId]
+    D --> E[prisma.profile.findUnique current user]
+    E --> F[prisma.preference.findUnique current user]
+    F --> G{Profile or preference\nmissing?}
+    G -->|Yes| H[Return empty feed]
+    G -->|No| I[prisma.profile.findMany all others]
+    I --> J[prisma.preference.findMany all]
+    J --> K{For each candidate}
+    K --> L[isEligible check:\n1 Same city\n2 Budget overlap\n3 Gender preference mutual]
+    L -->|Fails| K
+    L -->|Passes| M[calculateScore:\ncleanliness × weight\nsleep × weight\nhabits × weight\nsocial × weight]
+    M --> N[Push userId + score to results]
+    N --> K
+    K -->|All done| O[Sort by score descending]
+    O --> P[Filter out excludedUserIds]
+    P --> Q{For each candidate}
+    Q --> R[prisma.profile.findUnique include user]
+    R --> S[prisma.preference.findUnique]
+    S --> T[generateTags max 4:\nHas Room · Pet Friendly\nNon-Smoker · Clean and Tidy\nSocial · Quiet · Early Bird\nNight Owl · occupation]
+    T --> U[Build enriched feed entry]
+    U --> Q
+    Q -->|All done| V[Return enriched feed array]
+    V --> W[Display queue panel + profile detail]
+
+    W --> X{User action?}
+    X -->|Click Skip| Y[POST /discovery/swipe action=dislike]
+    X -->|Click Like| Z[POST /discovery/swipe action=like]
+
+    Y --> Y1[prisma.swipe.upsert action=dislike]
+    Y1 --> W2[Remove from queue]
+    W2 --> X
+
+    Z --> Z1[Normalize: superlike→like skip→dislike]
+    Z1 --> Z2[prisma.swipe.upsert action=like]
+    Z2 --> Z3[checkAndCreateMatch fromUserId toUserId]
+    Z3 --> Z4[prisma.swipe.findUnique reverse swipe]
+    Z4 --> Z5{Reverse like\nexists?}
+    Z5 -->|No| Z6[Return matched=false]
+    Z5 -->|Yes| Z7[Sort IDs: userAId = min\nuserBId = max]
+    Z7 --> Z8[prisma.match.upsert userAId userBId]
+    Z8 --> Z9[Return matched=true]
+    Z9 --> Z10[Show Match Notification]
+    Z10 --> W2
+    Z6 --> W2
+  </div>
+</div>
+
+<!-- ===================== 4c. ACTIVITY: CHAT ===================== -->
+<div class="diagram-section" id="diagram-4c">
+  <div class="diagram-title">④c Activity Diagram — Real-Time Chat</div>
+  <div class="diagram-subtitle">ChatController → ChatService → Socket.IO join/send/broadcast</div>
+  <div class="mermaid">
+flowchart TD
+    A([User opens Chat Page]) --> B[GET /matches/me]
+    B --> C[Display thread list with last messages]
+    C --> D{Select a match thread}
+    D --> E[GET /chat/:matchId Bearer JWT]
+    E --> F[validateUserInMatch matchId userId]
+    F --> G[prisma.match.findUnique id=matchId]
+    G --> H{User is userAId\nor userBId?}
+    H -->|No| I[403 Forbidden]
+    H -->|Yes| J[getOrCreateConversation matchId]
+    J --> K[prisma.conversation.upsert matchId]
+    K --> L[getMessages conversationId]
+    L --> M[prisma.message.findMany orderBy createdAt asc]
+    M --> N[prisma.profile.findUnique otherUserId include user]
+    N --> O[Return conversation + messages + otherUser]
+    O --> P[Render chat UI with message bubbles]
+    P --> Q[socket.emit join conversationId]
+    Q --> R[Server: socket.join conversationId room]
+
+    R --> S{User action?}
+    S -->|Type + Send| T[Optimistic UI: append message immediately]
+    T --> U[socket.emit send_message\nconversationId · senderId · content]
+    U --> V[Server: sendMessage conversationId senderId content]
+    V --> W[prisma.message.create]
+    W --> X[io.to conversationId .emit new_message\nid · senderId · content · timestamp]
+    X --> Y[Both clients receive new_message event]
+    Y --> Z[Append to messages array in UI]
+    Z --> S
+
+    S -->|Switch thread| D
+    S -->|Leave| AA([End])
+  </div>
+</div>
+
+<!-- ===================== 5a. SEQUENCE: AUTH ===================== -->
+<div class="diagram-section" id="diagram-5a">
+  <div class="diagram-title">⑤a Sequence Diagram — Authentication &amp; User Sync</div>
+  <div class="diagram-subtitle">Browser → Auth0 → AuthSync → UsersController → UsersService → Prisma</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant B as Browser
+    participant A0 as Auth0
+    participant AS as AuthSync Component
+    participant RX as Redux Store
+    participant MW as Auth Middleware
+    participant UC as UsersController
+    participant US as UsersService
+    participant DB as MongoDB via Prisma
+
+    B->>A0: loginWithRedirect()
+    A0-->>B: Redirect with access_token (RS256 JWT)
+    B->>AS: useEffect called (isAuthenticated=true, user set)
+    AS->>RX: dispatch(setAuth(user))
+    AS->>AS: getAccessTokenSilently()
+    AS->>MW: GET /users/me Authorization Bearer JWT
+    MW->>MW: checkJwt validate against Auth0 JWKS
+    MW->>MW: attachUserId extract payload.sub → req.userId
+    MW->>UC: getUserProfile(req, res)
+    UC->>UC: Read payload.sub email name picture
+    UC->>US: getOrCreateUser(auth0Id, email, name, picture)
+    US->>DB: prisma.user.findUnique(where: auth0id)
+    alt User not found
+        DB-->>US: null
+        US->>DB: prisma.user.create(auth0id, email, name, picture)
+        DB-->>US: New User document
+    else User found
+        DB-->>US: Existing User document
+    end
+    US-->>UC: User
+    UC-->>AS: 200 JSON User
+    AS-->>RX: User record available in auth slice
+  </div>
+</div>
+
+<!-- ===================== 5b. SEQUENCE: DISCOVERY FEED ===================== -->
+<div class="diagram-section" id="diagram-5b">
+  <div class="diagram-title">⑤b Sequence Diagram — Discovery Feed Loading</div>
+  <div class="diagram-subtitle">DiscoveryPage → DiscoveryService → MatchingService → Prisma</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant FE as DiscoveryPage
+    participant DC as DiscoveryController
+    participant DS as DiscoveryService
+    participant MS as MatchingService
+    participant DB as MongoDB via Prisma
+
+    FE->>DC: GET /discovery/feed Bearer JWT
+    DC->>DS: getDiscoveryFeed(userId)
+    DS->>DB: swipe.findMany(where: fromUserId=userId, select: toUserId)
+    DB-->>DS: excludedUserIds[]
+    DS->>MS: findMatchesForUser(userId)
+    MS->>DB: profile.findUnique(where: userId)
+    MS->>DB: preference.findUnique(where: userId)
+    DB-->>MS: userProfile + userPref
+    MS->>DB: profile.findMany(where: userId NOT userId)
+    MS->>DB: preference.findMany()
+    DB-->>MS: All candidate profiles + preferences
+    loop Each candidate
+        MS->>MS: isEligible(userA, userB) city+budget+gender
+        MS->>MS: calculateScore(prefA, prefB) weighted similarity
+        MS->>MS: Push result if eligible
+    end
+    MS-->>DS: Sorted[{userId, score}]
+    DS->>DS: Filter out excludedUserIds
+    loop Each remaining candidate
+        DS->>DB: profile.findUnique(include: user)
+        DS->>DB: preference.findUnique()
+        DB-->>DS: profile + preference
+        DS->>DS: generateTags(profile, pref) max 4
+    end
+    DS-->>DC: Enriched feed array
+    DC-->>FE: 200 JSON feed
+  </div>
+</div>
+
+<!-- ===================== 5c. SEQUENCE: SWIPE → MATCH ===================== -->
+<div class="diagram-section" id="diagram-5c">
+  <div class="diagram-title">⑤c Sequence Diagram — Swipe Like → Mutual Match</div>
+  <div class="diagram-subtitle">DiscoveryController → DiscoveryService → MatchesService → Prisma</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant FE as DiscoveryPage
+    participant DC as DiscoveryController
+    participant DS as DiscoveryService
+    participant MTS as MatchesService
+    participant DB as MongoDB via Prisma
+
+    FE->>DC: POST /discovery/swipe {toUserId, action: "like"}
+    DC->>DC: isSwipeAction validate value
+    DC->>DS: swipeUser(fromUserId, toUserId, "like")
+    DS->>DS: normalize: superlike→like, skip→dislike
+    DS->>DB: swipe.upsert(fromUserId+toUserId, action=like)
+    DB-->>DS: Swipe record
+    DS->>MTS: checkAndCreateMatch(fromUserId, toUserId)
+    MTS->>DB: swipe.findUnique(fromUserId=toUserId, toUserId=fromUserId)
+    alt No reverse swipe OR action != like
+        DB-->>MTS: null or dislike
+        MTS-->>DS: {matched: false}
+        DS-->>DC: {swipe, matched: false}
+        DC-->>FE: 200 {success: true}
+        Note over FE: Remove from queue silently
+    else Reverse like found
+        DB-->>MTS: Swipe{action: "like"}
+        MTS->>MTS: userAId = min(from,to), userBId = max(from,to)
+        MTS->>DB: match.upsert(userAId, userBId)
+        DB-->>MTS: Match record
+        MTS-->>DS: {matched: true, match}
+        DS-->>DC: {swipe, matched: true}
+        DC-->>FE: 200 {success: true}
+        Note over FE: Show Match notification
+    end
+  </div>
+</div>
+
+<!-- ===================== 5d. SEQUENCE: CHAT ===================== -->
+<div class="diagram-section" id="diagram-5d">
+  <div class="diagram-title">⑤d Sequence Diagram — Real-Time Chat (Socket.IO)</div>
+  <div class="diagram-subtitle">ChatController → ChatService → MongoDB → Socket.IO bidirectional</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant A as User A Browser
+    participant CC as ChatController
+    participant CS as ChatService
+    participant DB as MongoDB via Prisma
+    participant SIO as Socket.IO Server
+    participant B as User B Browser
+
+    A->>CC: GET /chat/:matchId Bearer JWT
+    CC->>CS: validateUserInMatch(matchId, userId)
+    CS->>DB: match.findUnique(id: matchId)
+    DB-->>CS: Match{userAId, userBId}
+    CS-->>CC: true (user is participant)
+    CC->>CS: getOrCreateConversation(matchId)
+    CS->>DB: conversation.upsert(matchId)
+    DB-->>CS: Conversation
+    CC->>CS: getMessages(conversationId)
+    CS->>DB: message.findMany(conversationId, orderBy: createdAt ASC)
+    DB-->>CS: Message[]
+    CC->>DB: profile.findUnique(otherUserId, include: user)
+    DB-->>CC: Other user profile
+    CC-->>A: {conversation, messages[], otherUser}
+    A->>SIO: socket.emit("join", conversationId)
+    SIO->>SIO: socket.join(room: conversationId)
+    B->>SIO: socket.emit("join", conversationId)
+    SIO->>SIO: socket.join(room: conversationId)
+    Note over A,B: Both users now in same Socket.IO room
+    A->>A: Type message, optimistic UI append
+    A->>SIO: socket.emit("send_message",{conversationId,senderId,content})
+    SIO->>CS: sendMessage(conversationId, senderId, content)
+    CS->>DB: message.create({conversationId, senderId, content})
+    DB-->>CS: Persisted Message
+    SIO->>A: io.to(conversationId).emit("new_message",{id,senderId,content,timestamp})
+    SIO->>B: io.to(conversationId).emit("new_message",{id,senderId,content,timestamp})
+    B->>B: Append new message to UI
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 60, messageMargin: 30 },
+    er: { diagramPadding: 30 },
+    classDiagram: { diagramPadding: 30 }
+  });
+</script>
+</body>
+</html>

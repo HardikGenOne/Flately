@@ -1,3 +1,6 @@
+# Class Diagram — Flately
+
+```mermaid
 classDiagram
     direction TB
 
@@ -239,3 +242,4 @@ classDiagram
     DiscoveryService --> PrismaClient : queries
     MatchesService --> PrismaClient : queries
     ChatService --> PrismaClient : queries
+```

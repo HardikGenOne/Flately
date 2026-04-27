@@ -1,0 +1,49 @@
+stateDiagram-v2
+    [*] --> OpenDiscoveryPage
+
+    state OpenDiscoveryPage {
+        [*] --> FetchFeed
+        FetchFeed --> GetCandidateFeed : GET /discovery/feed
+        GetCandidateFeed --> RunMatchingEngine : Process Candidates
+
+        state RunMatchingEngine {
+            [*] --> FetchAllOptions
+            FetchAllOptions --> EligibilityFilter
+            EligibilityFilter --> CheckCity : EligibilityStrategy
+            CheckCity --> CheckBudget : Budget overlap
+            CheckBudget --> CheckGender : Preferred gender
+            CheckGender --> CalculateScore : ScoringStrategy
+            CalculateScore --> RankResults : Sort by compatibility
+        }
+
+        RunMatchingEngine --> EnrichData : List of {userId, score}
+        EnrichData --> GenerateTags : Add profile metadata
+        GenerateTags --> ReturnFeed : Final candidates array
+    }
+
+    OpenDiscoveryPage --> DisplayQueue : Feed loaded
+    DisplayQueue --> ViewProfileDetail : Select candidate
+
+    ViewProfileDetail --> SwipeLike : Click Connect
+    ViewProfileDetail --> SwipeSkip : Click Pass
+
+    SwipeSkip --> RecordSkipSwipe : POST /discovery/swipe (dislike)
+    RecordSkipSwipe --> RemoveFromQueue
+    RemoveFromQueue --> DisplayQueue : Next candidate
+
+    SwipeLike --> RecordLikeSwipe : POST /discovery/swipe (like)
+    RecordLikeSwipe --> CheckMutualLike
+
+    state CheckMutualLike {
+        [*] --> QueryReverseSwipe
+        QueryReverseSwipe --> NoMatch : No reverse like
+        QueryReverseSwipe --> MutualMatch : Reverse like found
+        MutualMatch --> CreateMatch : Upsert Match record
+    }
+
+    CheckMutualLike --> MatchNotification : matched=true
+    CheckMutualLike --> RemoveFromQueue : matched=false
+    MatchNotification --> RemoveFromQueue
+
+    RemoveFromQueue --> DisplayQueue
+    DisplayQueue --> [*] : Queue empty

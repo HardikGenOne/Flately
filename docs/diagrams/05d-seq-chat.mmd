@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant A as User A (Browser)
+    participant CC as Chat Controller
+    participant CS as Chat Service
+    participant DB as Prisma / MongoDB
+    participant SIO as Socket.IO Server
+    participant B as User B (Browser)
+
+    A->>CC: GET /chat/:matchId
+    CC->>CS: getOrCreateConversation(matchId)
+    CS->>DB: prisma.conversation.upsert(...)
+    DB-->>CS: Conversation Record
+
+    CC->>CS: getMessages(conversationId)
+    CS->>DB: prisma.message.findMany(...)
+    DB-->>CS: History Array
+    
+    CC-->>A: { conversation, messages, otherUser }
+
+    A-->>SIO: socket.emit("join", conversationId)
+    B-->>SIO: socket.emit("join", conversationId)
+
+    A->>SIO: socket.emit("send_message", { content })
+    SIO->>CS: sendMessage(conversationId, senderId, content)
+    CS->>DB: prisma.message.create(...)
+    DB-->>CS: Message Persisted
+    
+    CS-->>SIO: Message Object
+    SIO->>A: io.to(convo).emit("new_message")
+    SIO->>B: io.to(convo).emit("new_message")

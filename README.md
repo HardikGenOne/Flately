@@ -147,71 +147,98 @@ flowchart LR
 
 All current UML and ERD diagrams are linked here.
 
-| Diagram | SVG | PDF | Focus |
+Planning and roadmap:
+
+- [Future Plan (Bugs + System Design)](docs/future-plan.md)
+
+| Diagram | Focus | Canonical Source | Rendered |
 | --- | --- | --- | --- |
-| 01 Class Diagram | [SVG](docs/svg/01-class-diagram.svg) | [PDF](docs/pdf/01-class-diagram.pdf) | Static architecture structure. Updated 2026-04-14 for auth factory refactor. Canonical source: [Mermaid](docs/diagrams/01-class-diagram.mmd) |
-| 02 Object Diagram | [SVG](docs/svg/02-object-diagram.svg) | [PDF](docs/pdf/02-object-diagram.pdf) | Runtime object snapshot |
-| 03 Use Case Diagram | [SVG](docs/svg/03-use-case-diagram.svg) | [PDF](docs/pdf/03-use-case-diagram.pdf) | Actor-system goals |
-| 04 Activity Diagram | [SVG](docs/svg/04-activity-diagram.svg) | [PDF](docs/pdf/04-activity-diagram.pdf) | Process and guard flow |
-| 05 Sequence Diagram | [SVG](docs/svg/05-sequence-diagram.svg) | [PDF](docs/pdf/05-sequence-diagram.pdf) | End-to-end interaction timing |
-| 06 ERD Diagram | [SVG](docs/svg/06-erd-diagram.svg) | [PDF](docs/pdf/06-erd-diagram.pdf) | Data model and relationships |
+| 01 Class Diagram | Static architecture & patterns | [Mermaid](docs/diagrams/1_class_diagram.md) | [SVG](docs/svg/01-class-diagram.svg) |
+| 02 Use Case Diagram | Actor-system goals | [Mermaid](docs/diagrams/2_use_case_diagram.md) | [SVG](docs/svg/02-use-case.svg) |
+| 03 ERD | Data model & relationships | [Mermaid](docs/diagrams/3_erd.md) | [SVG](docs/svg/03-erd.svg) |
+| 04a Activity — Onboarding | 6-step registration flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04a-activity-onboarding.svg) |
+| 04b Activity — Discovery | Discovery feed & swipe flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04b-activity-discovery.svg) |
+| 04c Activity — Chat | Real-time chat flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04c-activity-chat.svg) |
+| 05a Sequence — Auth | Google OAuth flow | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05a-seq-auth.svg) |
+| 05b Sequence — Discovery | Matching engine interaction | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05b-seq-discovery.svg) |
+| 05c Sequence — Swipe | Swipe to mutual match | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05c-seq-swipe.svg) |
+| 05d Sequence — Chat | Socket.IO chat flow | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05d-seq-chat.svg) |
 
-### Latest Diagram Update (2026-04-14)
+### Diagram Previews
 
-- Updated artifact: 01 Class Diagram.
-- Auth layer now models explicit factory composition: EmailAuthStrategyFactory, OAuthAuthorizationStrategyFactory, and AuthStrategyFactory.
-- Legacy auth singleton wrapper nodes were removed from the class model.
-- Prisma dependencies now attach to concrete auth strategies (EmailSignUpStrategy, EmailSignInStrategy, GoogleOAuthStrategy).
-- Canonical source remains [docs/diagrams/01-class-diagram.mmd](docs/diagrams/01-class-diagram.mmd), with rendered outputs in [docs/svg/01-class-diagram.svg](docs/svg/01-class-diagram.svg) and [docs/pdf/01-class-diagram.pdf](docs/pdf/01-class-diagram.pdf).
-
-### Highlighted (full-width)
-
-Click any section below to expand diagram previews.
+Click any section to expand the rendered diagram.
 
 <!-- markdownlint-disable MD033 -->
 <details>
-<summary>Class Diagram (click to expand)</summary>
-
-Canonical Mermaid source: [docs/diagrams/01-class-diagram.mmd](docs/diagrams/01-class-diagram.mmd)
+<summary>&#x1F4D0; Class Diagram — Architecture & Design Patterns</summary>
 
 ![Class Diagram](docs/svg/01-class-diagram.svg)
 
 </details>
 
 <details>
-<summary>Object Diagram (click to expand)</summary>
+<summary>&#x1F3AF; Use Case Diagram — Actor Goals</summary>
 
-![Object Diagram](docs/svg/02-object-diagram.svg)
-
-</details>
-
-<details>
-<summary>Use Case Diagram (click to expand)</summary>
-
-![Use Case Diagram](docs/svg/03-use-case-diagram.svg)
+![Use Case Diagram](docs/svg/02-use-case.svg)
 
 </details>
 
 <details>
-<summary>Activity Diagram (click to expand)</summary>
+<summary>&#x1F5C4;&#xFE0F; ERD — Entity-Relationship Diagram</summary>
 
-![Activity Diagram](docs/svg/04-activity-diagram.svg)
-
-</details>
-
-<details>
-<summary>Sequence Diagram (click to expand)</summary>
-
-![Sequence Diagram](docs/svg/05-sequence-diagram.svg)
+![ERD Diagram](docs/svg/03-erd.svg)
 
 </details>
 
 <details>
-<summary>ERD Diagram (click to expand)</summary>
+<summary>&#x1F504; Activity Diagram 1 — Registration & 6-Step Onboarding</summary>
 
-![ERD Diagram](docs/svg/06-erd-diagram.svg)
+![Onboarding Activity Diagram](docs/svg/04a-activity-onboarding.svg)
 
 </details>
+
+<details>
+<summary>&#x1F50D; Activity Diagram 2 — Discovery Feed & Swipe Flow</summary>
+
+![Discovery Activity Diagram](docs/svg/04b-activity-discovery.svg)
+
+</details>
+
+<details>
+<summary>&#x1F4AC; Activity Diagram 3 — Real-Time Chat Flow</summary>
+
+![Chat Activity Diagram](docs/svg/04c-activity-chat.svg)
+
+</details>
+
+<details>
+<summary>&#x1F510; Sequence Diagram 1 — Google OAuth Authentication</summary>
+
+![Auth Sequence Diagram](docs/svg/05a-seq-auth.svg)
+
+</details>
+
+<details>
+<summary>&#x1F9E0; Sequence Diagram 2 — Discovery Feed & Matching Engine</summary>
+
+![Discovery Sequence Diagram](docs/svg/05b-seq-discovery.svg)
+
+</details>
+
+<details>
+<summary>&#x2764;&#xFE0F; Sequence Diagram 3 — Swipe Connect to Mutual Match</summary>
+
+![Swipe Sequence Diagram](docs/svg/05c-seq-swipe.svg)
+
+</details>
+
+<details>
+<summary>&#x1F4E1; Sequence Diagram 4 — Real-Time Chat via Socket.IO</summary>
+
+![Chat Sequence Diagram](docs/svg/05d-seq-chat.svg)
+
+</details>
+
 <!-- markdownlint-enable MD033 -->
 
 ---
