@@ -1,0 +1,94 @@
+================================================================================
+FLATELY - SYSTEM DESIGN & ARCHITECTURE REPORT
+================================================================================
+
+EXECUTIVE SUMMARY
+Flately is a full-stack, real-time roommate-matching platform. 
+Built on a robust technology stack (React 19, Node.js 22.x, Express, MongoDB, Socket.IO), 
+Flately leverages advanced system design principles to ensure high performance, 
+maintainability, and scalability. This report serves as a detailed dossier of the 
+design patterns and architectural decisions implemented in the Flately codebase.
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURAL OVERVIEW
+--------------------------------------------------------------------------------
+Flately adopts a clear, modular architecture following a Controller-Service-ORM 
+pattern. 
+
+CLIENT (Browser): React 19, Redux Toolkit, Vite 7, TailwindCSS v4, Socket.IO Client
+BACKEND SERVER: Express 5, TypeScript, Socket.IO, Prisma ORM, JWT Middleware
+DATABASE: MongoDB Atlas
+
+The backend ensures single-responsibility boundaries for every feature group (Auth, 
+Discovery, Matches, Chat, Preferences, Profiles). Real-time communication for 
+live chatting is handled via WebSockets (Socket.IO).
+
+--------------------------------------------------------------------------------
+2. SOLID PRINCIPLES AT THE CORE
+--------------------------------------------------------------------------------
+* Single Responsibility Principle (SRP): Feature groups are cleanly broken into 
+  Route -> Controller -> Service. Transports in the frontend isolate networking.
+* Open/Closed Principle (OCP): New match eligibility parameters or scoring engines 
+  can be added by creating new Strategy classes without touching the core Matching 
+  service logic.
+* Liskov Substitution Principle (LSP): Concrete profile/preference upsert 
+  strategies seamlessly replace their abstract Template Method base.
+* Interface Segregation Principle (ISP): Small, focused interfaces like 
+  `EligibilityStrategy` and `ScoringStrategy` keep object dependencies minimal.
+* Dependency Inversion Principle (DIP): Components depend on Strategy interfaces, 
+  and dependency injection bags are passed into controllers and services.
+
+--------------------------------------------------------------------------------
+3. IMPLEMENTED DESIGN PATTERNS
+--------------------------------------------------------------------------------
+Flately relies on industry-standard GoF System Design patterns:
+
+A. CREATIONAL PATTERNS
+* Factory Method: Used extensively in the Authentication flows. 
+  `AuthStrategyFactory`, `DefaultEmailAuthStrategyFactory`, and 
+  `DefaultOAuthAuthorizationStrategyFactory` centralize the creation of precise 
+  authentication strategies without coupling the client to specific configurations.
+* Singleton: Applied broadly for system-wide module instances (Service Singletons, 
+  Transports, API client). A lazy singleton Prisma client wrapper prevents 
+  premature database connections.
+
+B. STRUCTURAL PATTERNS
+* Adapter: The `HttpClientAdapter` adapts the frontend application's network 
+  requests to standard Web Fetch APIs via `FetchRequestStrategy`, while domain-
+  focused Transport classes adapt these API contracts to business workflows.
+* Proxy: Flately utilizes a JavaScript `Proxy` for `PrismaClient` to lazily 
+  instantiate the database client only upon first actual property access.
+* Facade: Controllers and broad services export clean, unified API contracts while 
+  orchestrating complex downstream dependencies internally (e.g., `DiscoveryService`, 
+  `CloudinaryService`).
+
+C. BEHAVIORAL PATTERNS
+* Strategy: heavily anchors Flately's core algorithms.
+  - `EligibilityStrategy` & `ScoringStrategy`: Drive the weighted matching engine.
+  - `AuthContinuationStrategy`: Decides post-authentication routing routes 
+    (`QuestionnaireSourceStrategy`, `SignupDefaultStrategy`, etc.).
+  - `RequestStrategy`: Abstracts network execution mechanism in the client.
+* Template Method: The `UpsertByUserIdService` abstracts the invariant algorithm 
+  for database upserts, allowing `ProfileUpsertService` and 
+  `PreferenceUpsertService` to define domain-specific variable steps.
+* Observer: Central to the realtime notification and messaging sub-system via 
+  Socket.IO Publisher-Subscriber events (`socket.on(...)`, `io.emit(...)`) combined 
+  with Redux state subscriptions.
+
+--------------------------------------------------------------------------------
+4. THE MATCHING ALGORITHM - A STRATEGY IN ACTION
+--------------------------------------------------------------------------------
+Our custom matching engine operates in two phases:
+1. Eligibility Filter (Hard Constraints): Validates city matching, overlapping budget 
+   intervals, and gender compatibility.
+2. Compatibility Scoring Engine: Weighs and calculates similarity equations based 
+   on 1-5 scales (Cleanliness, Social Level) and boolean data (Smoking, Drinking), 
+   ensuring deterministic sub-scores that bubble up to an aggregate 0-100% 
+   match probability index using deterministic tie-ordering.
+
+CONCLUSION
+The Flately platform is a showcase of sophisticated system-level engineering. 
+By effectively combining modularity with deeply integrated GoF design patterns 
+and SOLID compliance, Flately easily scales, resists regression testing errors, 
+and delivers a performant, realtime user experience.
+================================================================================
