@@ -1,6 +1,16 @@
 # Flately
 
-> 🚀 **[Live Application Preview](https://frontend-roan-one-suwo5dr71s.vercel.app/)** | 📄 **[Official Architecture Report (Overleaf)](https://www.overleaf.com/read/vmcwbjywptnd#2012eb)**
+<div align="center">
+  <a href="https://frontend-roan-one-suwo5dr71s.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_Live_Preview-View_Application-0F4C5C?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Preview"/>
+  </a>
+  <a href="https://www.overleaf.com/read/vmcwbjywptnd#2012eb" target="_blank">
+    <img src="https://img.shields.io/badge/📄_Architecture-Overleaf_Report-47A248?style=for-the-badge&logo=overleaf&logoColor=white" alt="Overleaf Report"/>
+  </a>
+  <a href="https://drive.google.com/file/d/1UGyUvb7UpbkWTcGGqjuzGQ480eA0b9Iz/view?usp=sharing" target="_blank">
+    <img src="https://img.shields.io/badge/📊_Project_Report-Google_Drive_PDF-EA4335?style=for-the-badge&logo=googledrive&logoColor=white" alt="PDF Report"/>
+  </a>
+</div>
 
 ![Flately Logo](docs/assets/logo.png)
 
