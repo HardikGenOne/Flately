@@ -1,5 +1,7 @@
 # Flately
 
+> 🚀 **[Live Application Preview](https://frontend-roan-one-suwo5dr71s.vercel.app/)** | 📄 **[Official Architecture Report (Overleaf)](https://www.overleaf.com/read/vmcwbjywptnd#2012eb)**
+
 ![Flately Logo](docs/assets/logo.png)
 
 ![Flately animated heading](https://readme-typing-svg.demolab.com?font=Sora&weight=700&size=26&duration=2500&pause=900&color=0F4C5C&center=true&vCenter=true&width=980&lines=Flately+%E2%80%94+Roommate+Matching+Platform;Smart+Roommate+Discovery+with+Real-time+Chat;Built+with+TypeScript+from+Frontend+to+Backend)
