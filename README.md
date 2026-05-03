@@ -177,7 +177,7 @@ All UML diagrams are verified against the actual TypeScript codebase. Each diagr
 
 | # | Diagram | What It Shows | Source | Image |
 |---|---------|---------------|--------|-------|
-| 1 | **Class Diagram** | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [.mmd](docs/svg/1_class_diagram.mmd) | [.png](docs/svg/1_class_diagram.png) |
+| 1 | **Class Diagram** | 18 core classes, Strategy/Factory/Template Method patterns | [.mmd](docs/svg/1_class_diagram.mmd) | [.png](docs/svg/1_class_diagram.png) |
 | 2 | **Use Case Diagram** | 5 actors, 15 use cases across 7 system modules | [.mmd](docs/svg/2_usecase_diagram.mmd) | [.png](docs/svg/2_usecase_diagram.png) |
 | 3 | **ERD** | 7 Prisma/MongoDB models with all FK/PK constraints | [.mmd](docs/svg/3_erd_diagram.mmd) | [.png](docs/svg/3_erd_diagram.png) |
 | 4 | **Activity Diagram** | Full user journey: login → discovery → match → chat | [.mmd](docs/svg/4_activity_diagram.mmd) | [.png](docs/svg/4_activity_diagram.png) |

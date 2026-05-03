@@ -1,202 +1,114 @@
 classDiagram
-    direction TB
+    direction LR
 
-    class EmailAuthStrategy {
-        <<interface>>
-        +execute(credentials) Promise~AuthSession~
-    }
-
-    class OAuthAuthorizationStrategy {
-        <<interface>>
-        +getAuthorizationUrl(source, redirectOrigin) string
-        +completeAuthorization(code, state) Promise~object~
-        +consumeExchangeCode(code) AuthSession
-    }
-
-    class EmailAuthStrategyFactory {
-        <<interface>>
-        +create(intent) EmailAuthStrategy
-    }
-
-    class OAuthAuthorizationStrategyFactory {
-        <<interface>>
-        +create(provider) OAuthAuthorizationStrategy
-    }
-
-    class EligibilityStrategy {
-        <<interface>>
-        +isEligible(userA, userB) boolean
-    }
-
-    class ScoringStrategy {
-        <<interface>>
-        +calculateScore(prefA, prefB) number
-    }
-
-    class RequestStrategy {
-        <<interface>>
-        +send~T~(request) Promise~T~
-    }
-
-    class UpsertByUserIdService {
-        <<abstract>>
-        #findByUserId(userId) Promise~TResult~
-        #updateByUserId(userId, data) Promise~TResult~
-        #mapCreateData(userId, data) TCreateData
-        #createByUserId(data) Promise~TResult~
-        +upsert(userId, data) Promise~TResult~
+    %% ========== AUTH MODULE ==========
+    class AuthStrategyFactory {
+        +createEmailStrategy(intent)
+        +createOAuthStrategy(provider)
     }
 
     class EmailSignUpStrategy {
-        +execute(credentials) Promise~AuthSession~
+        +execute(credentials)
     }
 
     class EmailSignInStrategy {
-        +execute(credentials) Promise~AuthSession~
+        +execute(credentials)
     }
 
     class GoogleOAuthStrategy {
-        -googleOAuthStates: Map
-        -googleExchangeCodes: Map
-        +getAuthorizationUrl(source, redirectOrigin) string
-        +completeAuthorization(code, state) Promise~object~
-        +consumeExchangeCode(code) AuthSession
-        -cleanExpiredGoogleOAuthState() void
-        -cleanExpiredExchangeCodes() void
-        -getGoogleConfig() object
-        -createGoogleOAuthState(source, origin) string
-        -consumeGoogleOAuthState(state) object
-        -createExchangeCode(session) string
-        -fetchGoogleUserProfile(code) Promise~object~
+        +getAuthorizationUrl()
+        +completeAuthorization()
+        +consumeExchangeCode()
     }
 
-    class DefaultEmailAuthStrategyFactory {
-        -creators: Record
-        +create(intent) EmailAuthStrategy
-    }
-
-    class DefaultOAuthAuthorizationStrategyFactory {
-        -googleOAuthStates: Map
-        -googleExchangeCodes: Map
-        +create(provider) OAuthAuthorizationStrategy
-    }
-
-    class AuthStrategyFactory {
-        -emailFactory: EmailAuthStrategyFactory
-        -oauthFactory: OAuthAuthorizationStrategyFactory
-        +createEmailStrategy(intent) EmailAuthStrategy
-        +createOAuthStrategy(provider) OAuthAuthorizationStrategy
+    %% ========== MATCHING MODULE ==========
+    class MatchingService {
+        -eligibilityStrategy
+        -scoringStrategy
+        +findMatchesForUser(userId)
     }
 
     class DefaultEligibilityStrategy {
-        +isEligible(userA, userB) boolean
+        +isEligible(userA, userB)
     }
 
     class DefaultScoringStrategy {
-        -similarityScore(a, b, max) number
-        -booleanScore(a, b) number
-        +calculateScore(prefA, prefB) number
+        +calculateScore(prefA, prefB)
     }
 
-    class MatchingService {
-        -eligibilityStrategy: EligibilityStrategy
-        -scoringStrategy: ScoringStrategy
-        +findMatchesForUser(userId) Promise~Array~
-        +assertOnboardingCompleted(userId) Promise~void~
-    }
-
+    %% ========== CORE SERVICES ==========
     class DiscoveryService {
-        -dependencies: object
-        +getDiscoveryFeed(userId) Promise~Array~
-        +swipeUser(fromId, toId, action) Promise~object~
-        -generateTags(profile, pref) string[]
+        +getDiscoveryFeed(userId)
+        +swipeUser(fromId, toId, action)
     }
 
     class MatchesService {
-        -dependencies: object
-        +checkAndCreateMatch(fromId, toId) Promise~MatchCheckResult~
-        +getMyMatches(userId) Promise~Array~
-        -generateMatchTags(profile, pref) string[]
-    }
-
-    class ChatService {
-        +getOrCreateConversation(matchId) Promise~Conversation~
-        +getMessages(conversationId) Promise~Array~
-        +sendMessage(convoId, senderId, content) Promise~Message~
-        +validateUserInMatch(matchId, userId) Promise~boolean~
-    }
-
-    class ProfileUpsertService {
-        #findByUserId(userId) Promise~ProfileRecord~
-        #updateByUserId(userId, data) Promise~ProfileRecord~
-        #mapCreateData(userId, data) ProfileCreateData
-        #createByUserId(data) Promise~ProfileRecord~
+        +checkAndCreateMatch(fromId, toId)
+        +getMyMatches(userId)
     }
 
     class ProfileService {
-        +getProfileByUserId(userId) Promise~Profile~
-        +createOrUpdateProfile(userId, data) Promise~Profile~
-    }
-
-    class PreferenceUpsertService {
-        #findByUserId(userId) Promise~PreferenceRecord~
-        #updateByUserId(userId, data) Promise~PreferenceRecord~
-        #mapCreateData(userId, data) PreferenceCreateData
-        #createByUserId(data) Promise~PreferenceRecord~
+        +getProfileByUserId(userId)
+        +createOrUpdateProfile(userId, data)
     }
 
     class PreferencesService {
-        +getPreferences(userId) Promise~Preference~
-        +savePreferences(userId, data) Promise~Preference~
+        +getPreferences(userId)
+        +savePreferences(userId, data)
     }
 
-    class UploadsService {
-        +getCloudinaryUploadSignature() CloudinaryUploadSignature
-        -normalizeFolder(folder) string
-        -ensureCloudinaryConfig() object
-        -createCloudinarySignature(params, secret) string
+    class ChatService {
+        +getOrCreateConversation(matchId)
+        +sendMessage(convoId, senderId, content)
     }
 
-    class ApiError {
-        +status: number
-        +data: unknown
-        +url: string
+    %% ========== TEMPLATE METHOD ==========
+    class UpsertByUserIdService {
+        <<abstract>>
+        +upsert(userId, data)*
+    }
+
+    class ProfileUpsertService {
+        +upsert(userId, data)
+    }
+
+    class PreferenceUpsertService {
+        +upsert(userId, data)
+    }
+
+    %% ========== FRONTEND API ==========
+    class HttpClientAdapter {
+        -strategy
+        +request(config)
     }
 
     class FetchRequestStrategy {
-        +send~T~(request) Promise~T~
+        +send(request)
     }
 
-    class HttpClientAdapter {
-        -strategy: RequestStrategy
-        -baseUrl: string
-        +request~T~(config) Promise~T~
-    }
+    %% ========== RELATIONSHIPS ==========
+    
+    %% Auth Factory creates strategies
+    AuthStrategyFactory ..> EmailSignUpStrategy : creates
+    AuthStrategyFactory ..> EmailSignInStrategy : creates
+    AuthStrategyFactory ..> GoogleOAuthStrategy : creates
 
-    EmailAuthStrategy <|.. EmailSignUpStrategy
-    EmailAuthStrategy <|.. EmailSignInStrategy
-    OAuthAuthorizationStrategy <|.. GoogleOAuthStrategy
-    EmailAuthStrategyFactory <|.. DefaultEmailAuthStrategyFactory
-    OAuthAuthorizationStrategyFactory <|.. DefaultOAuthAuthorizationStrategyFactory
-    EligibilityStrategy <|.. DefaultEligibilityStrategy
-    ScoringStrategy <|.. DefaultScoringStrategy
-    RequestStrategy <|.. FetchRequestStrategy
+    %% Matching uses strategies
+    MatchingService o-- DefaultEligibilityStrategy : uses
+    MatchingService o-- DefaultScoringStrategy : uses
 
-    UpsertByUserIdService <|-- ProfileUpsertService
-    UpsertByUserIdService <|-- PreferenceUpsertService
-    Error <|-- ApiError
+    %% Discovery orchestrates
+    DiscoveryService --> MatchingService : ranks candidates
+    DiscoveryService --> MatchesService : creates matches
 
-    AuthStrategyFactory o-- EmailAuthStrategyFactory
-    AuthStrategyFactory o-- OAuthAuthorizationStrategyFactory
-    MatchingService o-- EligibilityStrategy
-    MatchingService o-- ScoringStrategy
-    HttpClientAdapter o-- RequestStrategy
+    %% Matches uses matching
+    MatchesService --> MatchingService : calculates scores
 
-    DefaultEmailAuthStrategyFactory ..> EmailSignUpStrategy : creates
-    DefaultEmailAuthStrategyFactory ..> EmailSignInStrategy : creates
-    DefaultOAuthAuthorizationStrategyFactory ..> GoogleOAuthStrategy : creates
-    ProfileService ..> ProfileUpsertService : delegates
-    PreferencesService ..> PreferenceUpsertService : delegates
-    DiscoveryService ..> MatchingService : uses
-    DiscoveryService ..> MatchesService : uses
-    MatchesService ..> MatchingService : uses
+    %% Template Method pattern
+    UpsertByUserIdService <|-- ProfileUpsertService : extends
+    UpsertByUserIdService <|-- PreferenceUpsertService : extends
+    ProfileService --> ProfileUpsertService : delegates
+    PreferencesService --> PreferenceUpsertService : delegates
+
+    %% Frontend Adapter pattern
+    HttpClientAdapter o-- FetchRequestStrategy : uses

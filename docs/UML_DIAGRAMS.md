@@ -9,7 +9,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 ## 1. Class Diagram — Architecture & Design Patterns
 
-> 20 classes, 7 interfaces, 1 abstract class. Shows Strategy, Factory, Template Method, and Adapter patterns.
+> 18 core classes organized by module. Shows Strategy, Factory, Template Method, and Adapter patterns in a clean left-to-right layout.
 
 ![Class Diagram](./svg/1_class_diagram.png)
 
