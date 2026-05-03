@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant U as User Frontend
+    participant DC as DiscoveryController
+    participant DS as DiscoveryService
+    participant MS as MatchingService
+    participant MaS as MatchesService
+    participant DB as MongoDB
+
+    U->>+DC: POST /discovery/swipe toUserId action like
+
+    DC->>+DS: swipeUser fromUserId toUserId like
+
+    DS->>+MS: assertOnboardingCompleted fromUserId
+    MS->>+DB: findUnique Profile and Preference
+    DB-->>-MS: records exist
+    MS-->>-DS: onboarding verified
+
+    DS->>+DB: upsert Swipe fromUserId toUserId like
+    DB-->>-DS: Swipe record
+
+    DS->>+MaS: checkAndCreateMatch fromUserId toUserId
+
+    MaS->>+DB: findUnique reverse Swipe where from equals toUserId to equals fromUserId
+    DB-->>-MaS: reverse Swipe record
+
+    alt Reverse swipe exists AND action equals like
+        MaS->>MaS: canonicalize IDs userAId less than userBId
+        MaS->>+DB: upsert Match userAId userBId
+        DB-->>-MaS: Match record
+        MaS-->>DS: matched true with match
+    else No mutual like
+        MaS-->>DS: matched false
+    end
+
+    deactivate MaS
+
+    DS-->>-DC: swipe and matched result
+    DC-->>-U: HTTP 200 response

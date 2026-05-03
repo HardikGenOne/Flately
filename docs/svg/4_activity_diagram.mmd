@@ -1,0 +1,39 @@
+stateDiagram-v2
+    [*] --> Login
+    Login --> Onboarding: New User
+    Login --> DiscoveryFeed: Existing User
+    Onboarding --> DiscoveryFeed: onboardingCompleted = true
+
+    state DiscoveryFeed {
+        [*] --> FetchCandidates
+        FetchCandidates --> RunMatchingEngine
+        RunMatchingEngine --> FilterSwiped
+        FilterSwiped --> ViewProfile
+
+        ViewProfile --> SwipeRight: Like
+        ViewProfile --> SwipeLeft: Skip
+
+        SwipeLeft --> FetchCandidates: Next
+
+        state SwipeRight {
+            [*] --> RecordSwipe
+            RecordSwipe --> AssertOnboarding
+            AssertOnboarding --> CheckMutualMatch
+            CheckMutualMatch --> CreateMatch: Mutual Like Found
+            CheckMutualMatch --> FetchCandidates: No Match Yet
+            CreateMatch --> FetchCandidates
+        }
+    }
+
+    DiscoveryFeed --> ViewMatches: Go to Matches
+    ViewMatches --> OpenChat: Select Match
+
+    state OpenChat {
+        [*] --> GetOrCreateConversation
+        GetOrCreateConversation --> LoadMessages
+        LoadMessages --> JoinSocketRoom
+        JoinSocketRoom --> ViewMessages
+        ViewMessages --> SendMessage
+        SendMessage --> BroadcastToRoom
+        BroadcastToRoom --> ViewMessages
+    }

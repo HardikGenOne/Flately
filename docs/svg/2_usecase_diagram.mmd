@@ -1,0 +1,78 @@
+flowchart LR
+    Guest([Guest User])
+    AuthUser([Authenticated User])
+    Google([Google OAuth])
+    Cloudinary([Cloudinary CDN])
+    SocketClient([Socket.IO Client])
+
+    subgraph Flately["Flately System"]
+        direction TB
+
+        subgraph AuthModule["Auth Module"]
+            UC_Signup(Signup with Email)
+            UC_Login(Login with Email)
+            UC_GoogleStart(Start Google OAuth)
+            UC_GoogleCallback(Google OAuth Callback)
+            UC_GoogleExchange(Exchange Google Code)
+        end
+
+        subgraph ProfileModule["Profile Module"]
+            UC_GetProfile(Get My Profile)
+            UC_UpdateProfile(Update My Profile)
+        end
+
+        subgraph PreferenceModule["Preference Module"]
+            UC_GetPrefs(Get My Preferences)
+            UC_SavePrefs(Save Preferences)
+        end
+
+        subgraph DiscoveryModule["Discovery Module"]
+            UC_Feed(Get Discovery Feed)
+            UC_Swipe(Swipe on User)
+        end
+
+        subgraph MatchModule["Match Module"]
+            UC_MyMatches(Get My Matches)
+            UC_CheckMatch(Check and Create Match)
+        end
+
+        subgraph ChatModule["Chat Module"]
+            UC_OpenChat(Open Conversation)
+            UC_SendMsg(Send Message)
+            UC_ReceiveMsg(Receive Message)
+        end
+
+        subgraph UploadModule["Upload Module"]
+            UC_Signature(Get Upload Signature)
+        end
+
+        subgraph MatchingEngine["Matching Engine"]
+            UC_FindMatches(Find Matches For User)
+        end
+    end
+
+    Guest --> UC_Signup
+    Guest --> UC_Login
+    Guest --> UC_GoogleStart
+
+    AuthUser --> UC_GetProfile
+    AuthUser --> UC_UpdateProfile
+    AuthUser --> UC_GetPrefs
+    AuthUser --> UC_SavePrefs
+    AuthUser --> UC_Feed
+    AuthUser --> UC_Swipe
+    AuthUser --> UC_MyMatches
+    AuthUser --> UC_OpenChat
+    AuthUser --> UC_Signature
+
+    SocketClient --> UC_SendMsg
+    SocketClient --> UC_ReceiveMsg
+
+    UC_GoogleStart --> Google
+    UC_GoogleCallback --> Google
+    UC_Signature --> Cloudinary
+
+    UC_Feed -.->|includes| UC_FindMatches
+    UC_MyMatches -.->|includes| UC_FindMatches
+    UC_Swipe -.->|extends| UC_CheckMatch
+    UC_CheckMatch -.->|extends| UC_OpenChat

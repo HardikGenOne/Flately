@@ -1,0 +1,89 @@
+erDiagram
+    USER {
+        string id PK
+        string email UK
+        string passwordHash
+        string googleId
+        string name
+        string picture
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    PROFILE {
+        string id PK
+        string userId FK
+        string name
+        int age
+        string gender
+        string bio
+        string city
+        boolean hasRoom
+        string occupation
+        string sleepSchedule
+        int noiseLevel
+        string guestPolicy
+        string smoking
+        string pets
+        boolean onboardingCompleted
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    PREFERENCE {
+        string id PK
+        string userId FK
+        string genderPreference
+        int minBudget
+        int maxBudget
+        string city
+        int cleanliness
+        int sleepSchedule
+        boolean smoking
+        boolean drinking
+        boolean pets
+        int socialLevel
+        int weightCleanliness
+        int weightSleep
+        int weightHabits
+        int weightSocial
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SWIPE {
+        string id PK
+        string fromUserId FK
+        string toUserId FK
+        string action
+        datetime createdAt
+    }
+
+    MATCH {
+        string id PK
+        string userAId FK
+        string userBId FK
+        datetime createdAt
+    }
+
+    CONVERSATION {
+        string id PK
+        string matchId FK
+        datetime createdAt
+    }
+
+    MESSAGE {
+        string id PK
+        string conversationId FK
+        string senderId FK
+        string content
+        datetime createdAt
+    }
+
+    USER ||--o| PROFILE : "has one"
+    USER ||--o| PREFERENCE : "has one"
+    USER ||--o{ SWIPE : "sends"
+    USER ||--o{ MATCH : "participates"
+    MATCH ||--o| CONVERSATION : "has one"
+    CONVERSATION ||--o{ MESSAGE : "contains"
+    USER ||--o{ MESSAGE : "authors"

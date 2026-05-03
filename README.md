@@ -169,97 +169,83 @@ flowchart LR
 
 ## Diagram Library
 
-All current UML and ERD diagrams are linked here.
+All UML diagrams are verified against the actual TypeScript codebase. Each diagram has a Mermaid source (`.mmd`) and a rendered SVG.
 
-Planning and roadmap:
+Planning and roadmap: [Future Plan (Bugs + System Design)](docs/future-plan.md)
 
-- [Future Plan (Bugs + System Design)](docs/future-plan.md)
+| # | Diagram | What It Shows | Source | Rendered |
+| --- | --- | --- | --- | --- |
+| 1 | Class Diagram | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [`.mmd`](docs/svg/1_class_diagram.mmd) | [`.svg`](docs/svg/1_class_diagram.svg) |
+| 2 | Use Case Diagram | 5 actors, 15 use cases across 7 system modules | [`.mmd`](docs/svg/2_usecase_diagram.mmd) | [`.svg`](docs/svg/2_usecase_diagram.svg) |
+| 3 | ERD | 7 Prisma/MongoDB models with all FK/PK constraints | [`.mmd`](docs/svg/3_erd_diagram.mmd) | [`.svg`](docs/svg/3_erd_diagram.svg) |
+| 4 | Activity Diagram | Full user journey: login → discovery → match → chat | [`.mmd`](docs/svg/4_activity_diagram.mmd) | [`.svg`](docs/svg/4_activity_diagram.svg) |
+| 5 | Sequence Diagram | Swipe → onboarding check → mutual match creation | [`.mmd`](docs/svg/5_sequence_diagram.mmd) | [`.svg`](docs/svg/5_sequence_diagram.svg) |
 
-| Diagram | Focus | Canonical Source | Rendered |
-| --- | --- | --- | --- |
-| 01 Class Diagram | Static architecture & patterns | [Mermaid](docs/diagrams/1_class_diagram.md) | [SVG](docs/svg/01-class-diagram.svg) |
-| 02 Use Case Diagram | Actor-system goals | [Mermaid](docs/diagrams/2_use_case_diagram.md) | [SVG](docs/svg/02-use-case.svg) |
-| 03 ERD | Data model & relationships | [Mermaid](docs/diagrams/3_erd.md) | [SVG](docs/svg/03-erd.svg) |
-| 04a Activity — Onboarding | 6-step registration flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04a-activity-onboarding.svg) |
-| 04b Activity — Discovery | Discovery feed & swipe flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04b-activity-discovery.svg) |
-| 04c Activity — Chat | Real-time chat flow | [Mermaid](docs/diagrams/4_activity_diagrams.md) | [SVG](docs/svg/04c-activity-chat.svg) |
-| 05a Sequence — Auth | Google OAuth flow | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05a-seq-auth.svg) |
-| 05b Sequence — Discovery | Matching engine interaction | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05b-seq-discovery.svg) |
-| 05c Sequence — Swipe | Swipe to mutual match | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05c-seq-swipe.svg) |
-| 05d Sequence — Chat | Socket.IO chat flow | [Mermaid](docs/diagrams/5_sequence_diagrams.md) | [SVG](docs/svg/05d-seq-chat.svg) |
+> 📋 Full Mermaid source with inline rendering: [`docs/UML_DIAGRAMS.md`](docs/UML_DIAGRAMS.md)
 
 ### Diagram Previews
 
-Click any section to expand the rendered diagram.
+Click any section below to expand the rendered diagram.
 
 <!-- markdownlint-disable MD033 -->
-<details>
-<summary>&#x1F4D0; Class Diagram — Architecture & Design Patterns</summary>
 
-![Class Diagram](docs/svg/01-class-diagram.svg)
+<details>
+<summary><strong>📐 1 — Class Diagram</strong> &nbsp;·&nbsp; Architecture & Design Patterns</summary>
+<br>
+
+> Shows all real TypeScript `class` declarations, interfaces, abstract classes, and their relationships (inheritance, realisation, aggregation, dependency).
+
+<p align="center">
+  <img src="docs/svg/1_class_diagram.svg" alt="Class Diagram" width="100%">
+</p>
 
 </details>
 
 <details>
-<summary>&#x1F3AF; Use Case Diagram — Actor Goals</summary>
+<summary><strong>🎯 2 — Use Case Diagram</strong> &nbsp;·&nbsp; Actor-System Interactions</summary>
+<br>
 
-![Use Case Diagram](docs/svg/02-use-case.svg)
+> Maps external actors (Guest, Authenticated User, Google OAuth, Cloudinary, Socket.IO Client) to the 15 public-facing operations across 7 system modules.
 
-</details>
-
-<details>
-<summary>&#x1F5C4;&#xFE0F; ERD — Entity-Relationship Diagram</summary>
-
-![ERD Diagram](docs/svg/03-erd.svg)
+<p align="center">
+  <img src="docs/svg/2_usecase_diagram.svg" alt="Use Case Diagram" width="100%">
+</p>
 
 </details>
 
 <details>
-<summary>&#x1F504; Activity Diagram 1 — Registration & 6-Step Onboarding</summary>
+<summary><strong>🗄️ 3 — Entity-Relationship Diagram</strong> &nbsp;·&nbsp; Database Schema</summary>
+<br>
 
-![Onboarding Activity Diagram](docs/svg/04a-activity-onboarding.svg)
+> All 7 Prisma models (User, Profile, Preference, Swipe, Match, Conversation, Message) with field types, PK/FK markers, and exact cardinalities from `schema.prisma`.
 
-</details>
-
-<details>
-<summary>&#x1F50D; Activity Diagram 2 — Discovery Feed & Swipe Flow</summary>
-
-![Discovery Activity Diagram](docs/svg/04b-activity-discovery.svg)
+<p align="center">
+  <img src="docs/svg/3_erd_diagram.svg" alt="ERD Diagram" width="100%">
+</p>
 
 </details>
 
 <details>
-<summary>&#x1F4AC; Activity Diagram 3 — Real-Time Chat Flow</summary>
+<summary><strong>🔄 4 — Activity Diagram</strong> &nbsp;·&nbsp; Discovery, Matching & Chat Flow</summary>
+<br>
 
-![Chat Activity Diagram](docs/svg/04c-activity-chat.svg)
+> End-to-end state flow from login → onboarding → discovery feed → matching engine → swipe → mutual match → real-time Socket.IO chat.
 
-</details>
-
-<details>
-<summary>&#x1F510; Sequence Diagram 1 — Google OAuth Authentication</summary>
-
-![Auth Sequence Diagram](docs/svg/05a-seq-auth.svg)
+<p align="center">
+  <img src="docs/svg/4_activity_diagram.svg" alt="Activity Diagram" width="100%">
+</p>
 
 </details>
 
 <details>
-<summary>&#x1F9E0; Sequence Diagram 2 — Discovery Feed & Matching Engine</summary>
+<summary><strong>🔀 5 — Sequence Diagram</strong> &nbsp;·&nbsp; Swipe & Match Process</summary>
+<br>
 
-![Discovery Sequence Diagram](docs/svg/05b-seq-discovery.svg)
+> The complete `POST /discovery/swipe` interaction between DiscoveryController → DiscoveryService → MatchingService → MatchesService → MongoDB, including the `assertOnboardingCompleted` guard and mutual-match `alt` block.
 
-</details>
-
-<details>
-<summary>&#x2764;&#xFE0F; Sequence Diagram 3 — Swipe Connect to Mutual Match</summary>
-
-![Swipe Sequence Diagram](docs/svg/05c-seq-swipe.svg)
-
-</details>
-
-<details>
-<summary>&#x1F4E1; Sequence Diagram 4 — Real-Time Chat via Socket.IO</summary>
-
-![Chat Sequence Diagram](docs/svg/05d-seq-chat.svg)
+<p align="center">
+  <img src="docs/svg/5_sequence_diagram.svg" alt="Sequence Diagram" width="100%">
+</p>
 
 </details>
 
