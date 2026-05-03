@@ -11,7 +11,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 > 20 classes, 7 interfaces, 1 abstract class. Shows Strategy, Factory, Template Method, and Adapter patterns.
 
-![Class Diagram](svg/1_class_diagram.png)
+![Class Diagram](./svg/1_class_diagram.png)
 
 **Key patterns visible:**
 
@@ -28,7 +28,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 > 5 actors, 15 use cases across 7 system modules with `«include»` and `«extend»` relationships.
 
-![Use Case Diagram](svg/2_usecase_diagram.png)
+![Use Case Diagram](./svg/2_usecase_diagram.png)
 
 **Actors:** Guest User, Authenticated User, Google OAuth, Cloudinary CDN, Socket.IO Client
 
@@ -38,7 +38,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 > 7 Prisma/MongoDB models with all FK/PK constraints and cardinalities from `schema.prisma`.
 
-![ER Diagram](svg/3_erd_diagram.png)
+![ER Diagram](./svg/3_erd_diagram.png)
 
 **Models:** User, Profile, Preference, Swipe, Match, Conversation, Message
 
@@ -48,7 +48,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 > End-to-end state flow: login → onboarding → discovery feed → matching engine → swipe → mutual match → real-time Socket.IO chat.
 
-![Activity Diagram](svg/4_activity_diagram.png)
+![Activity Diagram](./svg/4_activity_diagram.png)
 
 ---
 
@@ -56,7 +56,7 @@ All diagrams are verified against the actual TypeScript codebase.
 
 > Complete `POST /discovery/swipe` interaction including `assertOnboardingCompleted` guard and mutual-match `alt` block.
 
-![Sequence Diagram](svg/5_sequence_diagram.png)
+![Sequence Diagram](./svg/5_sequence_diagram.png)
 
 **Participants:** User Frontend → DiscoveryController → DiscoveryService → MatchingService → MatchesService → MongoDB
 

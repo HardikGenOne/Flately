@@ -169,128 +169,81 @@ flowchart LR
 
 ## 📊 UML Diagrams
 
-All UML diagrams are **verified against the actual TypeScript codebase**. Each diagram includes both Mermaid source (`.mmd`) and high-quality PNG render.
+All UML diagrams are verified against the actual TypeScript codebase. Each diagram has a Mermaid source (`.mmd`) and a rendered PNG.
 
-**📋 Complete Documentation**: [UML_DIAGRAMS.md](docs/UML_DIAGRAMS.md) · **🗺️ Planning**: [Future Plan](docs/future-plan.md)
+> 📋 **Full Documentation**: [UML_DIAGRAMS.md](docs/UML_DIAGRAMS.md) | 🗺️ **Planning**: [Future Plan](docs/future-plan.md)
 
----
+### Diagram Overview
 
-### Quick Reference Table
-
-| # | Diagram | Description | Files |
-|---|---------|-------------|-------|
-| **1** | **Class Diagram** | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [Source](docs/svg/1_class_diagram.mmd) · [PNG](docs/svg/1_class_diagram.png) |
-| **2** | **Use Case Diagram** | 5 actors, 15 use cases across 7 system modules | [Source](docs/svg/2_usecase_diagram.mmd) · [PNG](docs/svg/2_usecase_diagram.png) |
-| **3** | **Entity-Relationship Diagram** | 7 Prisma/MongoDB models with FK/PK constraints | [Source](docs/svg/3_erd_diagram.mmd) · [PNG](docs/svg/3_erd_diagram.png) |
-| **4** | **Activity Diagram** | Complete user journey: login → discovery → match → chat | [Source](docs/svg/4_activity_diagram.mmd) · [PNG](docs/svg/4_activity_diagram.png) |
-| **5** | **Sequence Diagram** | Swipe flow with onboarding check & mutual match creation | [Source](docs/svg/5_sequence_diagram.mmd) · [PNG](docs/svg/5_sequence_diagram.png) |
+| # | Diagram | What It Shows | Source | Image |
+|---|---------|---------------|--------|-------|
+| 1 | **Class Diagram** | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [.mmd](docs/svg/1_class_diagram.mmd) | [.png](docs/svg/1_class_diagram.png) |
+| 2 | **Use Case Diagram** | 5 actors, 15 use cases across 7 system modules | [.mmd](docs/svg/2_usecase_diagram.mmd) | [.png](docs/svg/2_usecase_diagram.png) |
+| 3 | **ERD** | 7 Prisma/MongoDB models with all FK/PK constraints | [.mmd](docs/svg/3_erd_diagram.mmd) | [.png](docs/svg/3_erd_diagram.png) |
+| 4 | **Activity Diagram** | Full user journey: login → discovery → match → chat | [.mmd](docs/svg/4_activity_diagram.mmd) | [.png](docs/svg/4_activity_diagram.png) |
+| 5 | **Sequence Diagram** | Swipe → onboarding check → mutual match creation | [.mmd](docs/svg/5_sequence_diagram.mmd) | [.png](docs/svg/5_sequence_diagram.png) |
 
 ---
 
 ### 🖼️ Visual Previews
 
-<details open>
-<summary><strong>📐 Diagram 1: Class Diagram</strong> — Architecture & Design Patterns</summary>
-<br>
+#### 📐 1. Class Diagram — Architecture & Design Patterns
 
-**What it shows**: All TypeScript classes, interfaces, abstract classes, and their relationships (inheritance, composition, dependency).
+Shows all TypeScript classes, interfaces, abstract classes, and their relationships.
 
-**Key patterns visible**: Strategy, Factory, Template Method, Adapter, Singleton, Observer
+**Key Patterns**: Strategy, Factory, Template Method, Adapter, Singleton, Observer
 
-<p align="center">
-  <img src="docs/svg/1_class_diagram.png" alt="Class Diagram - 20 classes showing Strategy, Factory, and Template Method patterns" width="100%">
-</p>
+![Class Diagram](./docs/svg/1_class_diagram.png)
 
-**📄 [View Mermaid Source](docs/svg/1_class_diagram.mmd)**
-
-</details>
-
-<details>
-<summary><strong>🎯 Diagram 2: Use Case Diagram</strong> — Actor-System Interactions</summary>
-<br>
-
-**What it shows**: External actors (Guest User, Authenticated User, Google OAuth, Cloudinary CDN, Socket.IO Client) and their interactions with 15 system operations across 7 modules.
-
-**Key relationships**: `«include»` and `«extend»` dependencies between use cases
-
-<p align="center">
-  <img src="docs/svg/2_usecase_diagram.png" alt="Use Case Diagram - 5 actors and 15 use cases" width="100%">
-</p>
-
-**📄 [View Mermaid Source](docs/svg/2_usecase_diagram.mmd)**
-
-</details>
-
-<details>
-<summary><strong>🗄️ Diagram 3: Entity-Relationship Diagram (ERD)</strong> — Database Schema</summary>
-<br>
-
-**What it shows**: All 7 Prisma models (User, Profile, Preference, Swipe, Match, Conversation, Message) with complete field types, primary keys, foreign keys, and cardinalities.
-
-**Source**: Directly mapped from `backend/prisma/schema.prisma`
-
-<p align="center">
-  <img src="docs/svg/3_erd_diagram.png" alt="ERD - 7 MongoDB models with relationships" width="100%">
-</p>
-
-**📄 [View Mermaid Source](docs/svg/3_erd_diagram.mmd)**
-
-</details>
-
-<details>
-<summary><strong>🔄 Diagram 4: Activity Diagram</strong> — Discovery, Matching & Chat Flow</summary>
-<br>
-
-**What it shows**: End-to-end state flow from user login → profile onboarding → discovery feed → matching engine → swipe action → mutual match detection → real-time Socket.IO chat.
-
-**Decision points**: Authentication gates, onboarding completion checks, mutual like detection
-
-<p align="center">
-  <img src="docs/svg/4_activity_diagram.png" alt="Activity Diagram - Complete user journey flow" width="100%">
-</p>
-
-**📄 [View Mermaid Source](docs/svg/4_activity_diagram.mmd)**
-
-</details>
-
-<details>
-<summary><strong>🔀 Diagram 5: Sequence Diagram</strong> — Swipe & Match Process</summary>
-<br>
-
-**What it shows**: Complete `POST /discovery/swipe` interaction flow between User Frontend → DiscoveryController → DiscoveryService → MatchingService → MatchesService → MongoDB.
-
-**Key flows**: Onboarding guard (`assertOnboardingCompleted`), swipe recording, mutual match detection (`alt` block), match creation
-
-<p align="center">
-  <img src="docs/svg/5_sequence_diagram.png" alt="Sequence Diagram - Swipe and match creation flow" width="100%">
-</p>
-
-**📄 [View Mermaid Source](docs/svg/5_sequence_diagram.mmd)**
-
-</details>
+[📄 View Mermaid Source](docs/svg/1_class_diagram.mmd)
 
 ---
 
-### 🔄 Regenerating Diagrams
+#### 🎯 2. Use Case Diagram — Actor-System Interactions
 
-To regenerate PNG files from Mermaid sources:
+Maps external actors to 15 system operations across 7 modules.
 
-```bash
-# Install Mermaid CLI (one-time)
-npm install -g @mermaid-js/mermaid-cli
+**Actors**: Guest User, Authenticated User, Google OAuth, Cloudinary CDN, Socket.IO Client
 
-# Regenerate a specific diagram
-mmdc -i docs/svg/1_class_diagram.mmd -o docs/svg/1_class_diagram.png -b white -s 2
+![Use Case Diagram](./docs/svg/2_usecase_diagram.png)
 
-# Regenerate all diagrams
-for file in docs/svg/*.mmd; do
-  mmdc -i "$file" -o "${file%.mmd}.png" -b white -s 2
-done
-```
+[📄 View Mermaid Source](docs/svg/2_usecase_diagram.mmd)
 
-**Parameters**:
-- `-b white` - White background
-- `-s 2` - 2x scale for high resolution
+---
+
+#### 🗄️ 3. Entity-Relationship Diagram — Database Schema
+
+All 7 Prisma models with field types, primary keys, foreign keys, and cardinalities.
+
+**Models**: User, Profile, Preference, Swipe, Match, Conversation, Message
+
+![ERD Diagram](./docs/svg/3_erd_diagram.png)
+
+[📄 View Mermaid Source](docs/svg/3_erd_diagram.mmd)
+
+---
+
+#### 🔄 4. Activity Diagram — Discovery, Matching & Chat Flow
+
+End-to-end state flow from login through onboarding, discovery, matching, and real-time chat.
+
+**Key Flows**: Authentication gates, onboarding checks, mutual match detection
+
+![Activity Diagram](./docs/svg/4_activity_diagram.png)
+
+[📄 View Mermaid Source](docs/svg/4_activity_diagram.mmd)
+
+---
+
+#### 🔀 5. Sequence Diagram — Swipe & Match Process
+
+Complete `POST /discovery/swipe` interaction flow through all backend layers.
+
+**Participants**: Frontend → Controller → Service → Matching → Matches → MongoDB
+
+![Sequence Diagram](./docs/svg/5_sequence_diagram.png)
+
+[📄 View Mermaid Source](docs/svg/5_sequence_diagram.mmd)
 
 ---
 
