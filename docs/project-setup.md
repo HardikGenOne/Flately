@@ -201,8 +201,10 @@ flately-full_stack/
 | [`api-reference.md`](./api-reference.md) | All REST + Socket.IO endpoints with request/response examples |
 | [`matching-algorithm.md`](./matching-algorithm.md) | Compatibility algorithm deep-dive with formulas and worked examples |
 | [`frontend-guide.md`](./frontend-guide.md) | Frontend architecture, design system, page breakdowns, Redux slices |
-| [`backend-code-reference.md`](./backend-code-reference.md) | Current backend architecture baseline with compatibility snippets |
-| [`minimal-ui-redesign-plan.md`](./minimal-ui-redesign-plan.md) | Forward plan for minimal frontend redesign and verification-first rollout |
+| [`class-first-system-design-study-guide.md`](./class-first-system-design-study-guide.md) | Design patterns, SOLID analysis, class inventory, viva prep |
+| [`UML_DIAGRAMS.md`](./UML_DIAGRAMS.md) | UML diagram gallery with PNG exports and Mermaid sources |
+| [`product-user-flow.md`](./product-user-flow.md) | Canonical user journey and route guard contract |
+| [`future-plan.md`](./future-plan.md) | Bug backlog, system design improvements, execution roadmap |
 | [`historical-archive.md`](./historical-archive.md) | Historical docs boundary and legacy-to-current mapping guide |
 | [`project-setup.md`](./project-setup.md) | This file — setup, scripts, directory structure |
 

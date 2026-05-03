@@ -167,89 +167,132 @@ flowchart LR
 
 ---
 
-## Diagram Library
+## 📊 UML Diagrams
 
-All UML diagrams are verified against the actual TypeScript codebase. Each diagram has a Mermaid source (`.mmd`) and a rendered SVG.
+All UML diagrams are **verified against the actual TypeScript codebase**. Each diagram includes both Mermaid source (`.mmd`) and high-quality PNG render.
 
-Planning and roadmap: [Future Plan (Bugs + System Design)](docs/future-plan.md)
+**📋 Complete Documentation**: [UML_DIAGRAMS.md](docs/UML_DIAGRAMS.md) · **🗺️ Planning**: [Future Plan](docs/future-plan.md)
 
-| # | Diagram | What It Shows | Source | Rendered |
-| --- | --- | --- | --- | --- |
-| 1 | Class Diagram | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [`.mmd`](docs/svg/1_class_diagram.mmd) | [`.svg`](docs/svg/1_class_diagram.svg) |
-| 2 | Use Case Diagram | 5 actors, 15 use cases across 7 system modules | [`.mmd`](docs/svg/2_usecase_diagram.mmd) | [`.svg`](docs/svg/2_usecase_diagram.svg) |
-| 3 | ERD | 7 Prisma/MongoDB models with all FK/PK constraints | [`.mmd`](docs/svg/3_erd_diagram.mmd) | [`.svg`](docs/svg/3_erd_diagram.svg) |
-| 4 | Activity Diagram | Full user journey: login → discovery → match → chat | [`.mmd`](docs/svg/4_activity_diagram.mmd) | [`.svg`](docs/svg/4_activity_diagram.svg) |
-| 5 | Sequence Diagram | Swipe → onboarding check → mutual match creation | [`.mmd`](docs/svg/5_sequence_diagram.mmd) | [`.svg`](docs/svg/5_sequence_diagram.svg) |
+---
 
-> 📋 Full Mermaid source with inline rendering: [`docs/UML_DIAGRAMS.md`](docs/UML_DIAGRAMS.md)
+### Quick Reference Table
 
-### Diagram Previews
+| # | Diagram | Description | Files |
+|---|---------|-------------|-------|
+| **1** | **Class Diagram** | 20 classes, 7 interfaces, Strategy/Factory/Template Method patterns | [Source](docs/svg/1_class_diagram.mmd) · [PNG](docs/svg/1_class_diagram.png) |
+| **2** | **Use Case Diagram** | 5 actors, 15 use cases across 7 system modules | [Source](docs/svg/2_usecase_diagram.mmd) · [PNG](docs/svg/2_usecase_diagram.png) |
+| **3** | **Entity-Relationship Diagram** | 7 Prisma/MongoDB models with FK/PK constraints | [Source](docs/svg/3_erd_diagram.mmd) · [PNG](docs/svg/3_erd_diagram.png) |
+| **4** | **Activity Diagram** | Complete user journey: login → discovery → match → chat | [Source](docs/svg/4_activity_diagram.mmd) · [PNG](docs/svg/4_activity_diagram.png) |
+| **5** | **Sequence Diagram** | Swipe flow with onboarding check & mutual match creation | [Source](docs/svg/5_sequence_diagram.mmd) · [PNG](docs/svg/5_sequence_diagram.png) |
 
-Click any section below to expand the rendered diagram.
+---
 
-<!-- markdownlint-disable MD033 -->
+### 🖼️ Visual Previews
 
-<details>
-<summary><strong>📐 1 — Class Diagram</strong> &nbsp;·&nbsp; Architecture & Design Patterns</summary>
+<details open>
+<summary><strong>📐 Diagram 1: Class Diagram</strong> — Architecture & Design Patterns</summary>
 <br>
 
-> Shows all real TypeScript `class` declarations, interfaces, abstract classes, and their relationships (inheritance, realisation, aggregation, dependency).
+**What it shows**: All TypeScript classes, interfaces, abstract classes, and their relationships (inheritance, composition, dependency).
+
+**Key patterns visible**: Strategy, Factory, Template Method, Adapter, Singleton, Observer
 
 <p align="center">
-  <img src="docs/svg/1_class_diagram.svg" alt="Class Diagram" width="100%">
+  <img src="docs/svg/1_class_diagram.png" alt="Class Diagram - 20 classes showing Strategy, Factory, and Template Method patterns" width="100%">
 </p>
+
+**📄 [View Mermaid Source](docs/svg/1_class_diagram.mmd)**
 
 </details>
 
 <details>
-<summary><strong>🎯 2 — Use Case Diagram</strong> &nbsp;·&nbsp; Actor-System Interactions</summary>
+<summary><strong>🎯 Diagram 2: Use Case Diagram</strong> — Actor-System Interactions</summary>
 <br>
 
-> Maps external actors (Guest, Authenticated User, Google OAuth, Cloudinary, Socket.IO Client) to the 15 public-facing operations across 7 system modules.
+**What it shows**: External actors (Guest User, Authenticated User, Google OAuth, Cloudinary CDN, Socket.IO Client) and their interactions with 15 system operations across 7 modules.
+
+**Key relationships**: `«include»` and `«extend»` dependencies between use cases
 
 <p align="center">
-  <img src="docs/svg/2_usecase_diagram.svg" alt="Use Case Diagram" width="100%">
+  <img src="docs/svg/2_usecase_diagram.png" alt="Use Case Diagram - 5 actors and 15 use cases" width="100%">
 </p>
+
+**📄 [View Mermaid Source](docs/svg/2_usecase_diagram.mmd)**
 
 </details>
 
 <details>
-<summary><strong>🗄️ 3 — Entity-Relationship Diagram</strong> &nbsp;·&nbsp; Database Schema</summary>
+<summary><strong>🗄️ Diagram 3: Entity-Relationship Diagram (ERD)</strong> — Database Schema</summary>
 <br>
 
-> All 7 Prisma models (User, Profile, Preference, Swipe, Match, Conversation, Message) with field types, PK/FK markers, and exact cardinalities from `schema.prisma`.
+**What it shows**: All 7 Prisma models (User, Profile, Preference, Swipe, Match, Conversation, Message) with complete field types, primary keys, foreign keys, and cardinalities.
+
+**Source**: Directly mapped from `backend/prisma/schema.prisma`
 
 <p align="center">
-  <img src="docs/svg/3_erd_diagram.svg" alt="ERD Diagram" width="100%">
+  <img src="docs/svg/3_erd_diagram.png" alt="ERD - 7 MongoDB models with relationships" width="100%">
 </p>
+
+**📄 [View Mermaid Source](docs/svg/3_erd_diagram.mmd)**
 
 </details>
 
 <details>
-<summary><strong>🔄 4 — Activity Diagram</strong> &nbsp;·&nbsp; Discovery, Matching & Chat Flow</summary>
+<summary><strong>🔄 Diagram 4: Activity Diagram</strong> — Discovery, Matching & Chat Flow</summary>
 <br>
 
-> End-to-end state flow from login → onboarding → discovery feed → matching engine → swipe → mutual match → real-time Socket.IO chat.
+**What it shows**: End-to-end state flow from user login → profile onboarding → discovery feed → matching engine → swipe action → mutual match detection → real-time Socket.IO chat.
+
+**Decision points**: Authentication gates, onboarding completion checks, mutual like detection
 
 <p align="center">
-  <img src="docs/svg/4_activity_diagram.svg" alt="Activity Diagram" width="100%">
+  <img src="docs/svg/4_activity_diagram.png" alt="Activity Diagram - Complete user journey flow" width="100%">
 </p>
+
+**📄 [View Mermaid Source](docs/svg/4_activity_diagram.mmd)**
 
 </details>
 
 <details>
-<summary><strong>🔀 5 — Sequence Diagram</strong> &nbsp;·&nbsp; Swipe & Match Process</summary>
+<summary><strong>🔀 Diagram 5: Sequence Diagram</strong> — Swipe & Match Process</summary>
 <br>
 
-> The complete `POST /discovery/swipe` interaction between DiscoveryController → DiscoveryService → MatchingService → MatchesService → MongoDB, including the `assertOnboardingCompleted` guard and mutual-match `alt` block.
+**What it shows**: Complete `POST /discovery/swipe` interaction flow between User Frontend → DiscoveryController → DiscoveryService → MatchingService → MatchesService → MongoDB.
+
+**Key flows**: Onboarding guard (`assertOnboardingCompleted`), swipe recording, mutual match detection (`alt` block), match creation
 
 <p align="center">
-  <img src="docs/svg/5_sequence_diagram.svg" alt="Sequence Diagram" width="100%">
+  <img src="docs/svg/5_sequence_diagram.png" alt="Sequence Diagram - Swipe and match creation flow" width="100%">
 </p>
+
+**📄 [View Mermaid Source](docs/svg/5_sequence_diagram.mmd)**
 
 </details>
 
-<!-- markdownlint-enable MD033 -->
+---
+
+### 🔄 Regenerating Diagrams
+
+To regenerate PNG files from Mermaid sources:
+
+```bash
+# Install Mermaid CLI (one-time)
+npm install -g @mermaid-js/mermaid-cli
+
+# Regenerate a specific diagram
+mmdc -i docs/svg/1_class_diagram.mmd -o docs/svg/1_class_diagram.png -b white -s 2
+
+# Regenerate all diagrams
+for file in docs/svg/*.mmd; do
+  mmdc -i "$file" -o "${file%.mmd}.png" -b white -s 2
+done
+```
+
+**Parameters**:
+- `-b white` - White background
+- `-s 2` - 2x scale for high resolution
+
+---
 
 ---
 
@@ -328,28 +371,34 @@ Expected response:
 
 ## Verification Snapshot
 
-- Backend typecheck: pass
-- Backend tests: pass
-- Backend build: pass
-- Frontend typecheck: pass
-- Frontend tests: pass
-- Frontend build: pass
-- Manual auth and route-state verification: complete
+All verification complete as of 2026-05-03:
 
-Reference: [docs/manual-auth-end-to-end-verification.md](docs/manual-auth-end-to-end-verification.md)
+- ✅ Backend typecheck: pass
+- ✅ Backend tests: pass  
+- ✅ Backend build: pass
+- ✅ Frontend typecheck: pass
+- ✅ Frontend tests: pass
+- ✅ Frontend build: pass
+- ✅ Manual auth flows: verified
+
+**Testing Guide**: [Manual Auth End-to-End Verification](docs/manual-auth-end-to-end-verification.md)
 
 ---
 
-## Documentation Index
+## 📚 Documentation
 
-- Setup: [docs/project-setup.md](docs/project-setup.md)
-- Product flow: [docs/product-user-flow.md](docs/product-user-flow.md)
-- Architecture: [docs/architecture.md](docs/architecture.md)
-- API contract: [docs/api-reference.md](docs/api-reference.md)
-- Database schema: [docs/database-schema.md](docs/database-schema.md)
-- Frontend reference: [docs/frontend-guide.md](docs/frontend-guide.md)
-- Backend reference: [docs/backend-code-reference.md](docs/backend-code-reference.md)
-- Historical boundary: [docs/historical-archive.md](docs/historical-archive.md)
+**[📖 Complete Documentation Index](docs/DOCUMENTATION.md)** - Master navigation for all documentation
+
+### Quick Links
+
+| Category | Documents |
+|----------|-----------|
+| **Getting Started** | [Setup](docs/project-setup.md) · [User Flow](docs/product-user-flow.md) · [Architecture](docs/architecture.md) |
+| **Implementation** | [Backend Reference](docs/backend-code-reference.md) · [Frontend Guide](docs/frontend-guide.md) · [API Reference](docs/api-reference.md) |
+| **Database** | [Schema](docs/database-schema.md) · [Matching Algorithm](docs/matching-algorithm.md) |
+| **Testing** | [Auth Verification](docs/manual-auth-end-to-end-verification.md) |
+| **Design** | [UML Diagrams](docs/UML_DIAGRAMS.md) · [System Design Study Guide](docs/class-first-system-design-study-guide.md) |
+| **Planning** | [Future Plan](docs/future-plan.md) · [Historical Archive](docs/historical-archive.md) |
 
 ---
 
