@@ -1,24 +1,9 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import jwt, { SignOptions } from 'jsonwebtoken';
-import prisma from '../../config/prisma';
+import jwt from 'jsonwebtoken';
 import env from '../../config/env';
-
-type AuthSession = {
-  accessToken: string;
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    picture: string | null;
-  };
-};
-
-type EmailCredentials = {
-  email: string;
-  password: string;
-  name?: string;
-};
+import prisma from '../../config/prisma';
+import { AuthSession, EmailCredentials } from '../../types/auth';
 
 type SessionUser = {
   id: string;
@@ -27,23 +12,8 @@ type SessionUser = {
   picture: string | null;
 };
 
-type GoogleUserProfile = {
-  sub: string;
-  email: string;
-  name: string | null;
-  picture: string | null;
-};
-
-type GoogleOAuthStateEntry = {
-  expiresAt: number;
-  source?: string;
-  redirectOrigin?: string;
-};
-
-type GoogleExchangeCodeEntry = {
-  expiresAt: number;
-  session: AuthSession;
-};
+type EmailAuthIntent = 'signup' | 'signin';
+type OAuthProvider = 'google';
 
 interface EmailAuthStrategy {
   execute(credentials: EmailCredentials): Promise<AuthSession>;
@@ -58,9 +28,6 @@ interface OAuthAuthorizationStrategy {
   consumeExchangeCode(code: string): AuthSession;
 }
 
-type EmailAuthIntent = 'signup' | 'signin';
-type OAuthProvider = 'google';
-
 interface EmailAuthStrategyFactory {
   create(intent: EmailAuthIntent): EmailAuthStrategy;
 }
@@ -70,7 +37,25 @@ interface OAuthAuthorizationStrategyFactory {
 }
 
 const GOOGLE_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const GOOGLE_EXCHANGE_CODE_TTL_MS = 2 * 60 * 1000;
+const GOOGLE_EXCHANGE_CODE_TTL_MS = 15 * 60 * 1000;
+
+type GoogleOAuthStateEntry = {
+  expiresAt: number;
+  source?: string;
+  redirectOrigin?: string;
+};
+
+type GoogleExchangeCodeEntry = {
+  expiresAt: number;
+  session: AuthSession;
+};
+
+type GoogleUserProfile = {
+  sub: string;
+  email: string;
+  name: string | null;
+  picture: string | null;
+};
 
 const googleOAuthStatesStore = new Map<string, GoogleOAuthStateEntry>();
 const googleExchangeCodesStore = new Map<string, GoogleExchangeCodeEntry>();
@@ -79,9 +64,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function readString(record: Record<string, unknown>, key: string): string | null {
+function readString(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];
-  return typeof value === 'string' && value.trim() ? value : null;
+  return typeof value === 'string' ? value : undefined;
 }
 
 function sanitizeSource(source?: string): string | undefined {
@@ -89,49 +74,18 @@ function sanitizeSource(source?: string): string | undefined {
     return undefined;
   }
 
-  const normalized = source.trim().toLowerCase();
-  if (normalized === 'mobile' || normalized === 'app') {
-    return normalized;
-  }
-
-  return undefined;
+  const trimmed = source.trim().toLowerCase();
+  return trimmed || undefined;
 }
 
-function sanitizeRedirectOrigin(redirectOrigin?: string): string | undefined {
-  if (typeof redirectOrigin !== 'string') {
-    return undefined;
-  }
-
-  const candidate = redirectOrigin.trim();
-  if (!candidate) {
+function sanitizeRedirectOrigin(origin?: string): string | undefined {
+  if (typeof origin !== 'string') {
     return undefined;
   }
 
   try {
-    const parsed = new URL(candidate);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return undefined;
-    }
-
-    const normalized = parsed.origin;
-
-    const allowedOrigins = [env.FRONTEND_URL, 'http://localhost:5173']
-      .map((origin) => origin.trim())
-      .filter(Boolean)
-      .map((origin) => {
-        try {
-          return new URL(origin).origin;
-        } catch {
-          return null;
-        }
-      })
-      .filter((origin): origin is string => origin !== null);
-
-    if (!allowedOrigins.includes(normalized)) {
-      return undefined;
-    }
-
-    return normalized;
+    const parsed = new URL(origin);
+    return parsed.origin;
   } catch {
     return undefined;
   }
@@ -141,24 +95,25 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function signAccessToken(user: SessionUser): string {
-  const payload = {
-    sub: user.id,
-    email: user.email,
-    name: user.name,
-    picture: user.picture,
-  };
-
-  const options: SignOptions = {
-    expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'],
-  };
-
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET, options);
+function issueTokenPair(userId: string): { accessToken: string; refreshToken: string } {
+  const accessToken = jwt.sign(
+    { sub: userId },
+    env.JWT_ACCESS_SECRET,
+    { expiresIn: env.JWT_ACCESS_EXPIRES_IN as any }
+  );
+  const refreshToken = jwt.sign(
+    { sub: userId, type: 'refresh' },
+    env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
+  return { accessToken, refreshToken };
 }
 
-function toSession(user: SessionUser): AuthSession {
+function toSession(user: SessionUser): AuthSession & { refreshToken: string } {
+  const tokens = issueTokenPair(user.id);
   return {
-    accessToken: signAccessToken(user),
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     user: {
       id: user.id,
       email: user.email,
@@ -169,62 +124,47 @@ function toSession(user: SessionUser): AuthSession {
 }
 
 class EmailSignUpStrategy implements EmailAuthStrategy {
-  async execute(credentials: EmailCredentials): Promise<AuthSession> {
+  async execute(credentials: EmailCredentials & { name?: string }): Promise<AuthSession & { refreshToken: string }> {
     const email = normalizeEmail(credentials.email);
-    const existing = await prisma.user.findUnique({ where: { email } });
+
+    const existing = await prisma.user.findUnique({
+      where: { email },
+    });
 
     if (existing) {
       throw new Error('EMAIL_ALREADY_EXISTS');
     }
 
-    const passwordHash = await bcrypt.hash(credentials.password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(credentials.password, salt);
 
-    let user;
-
-    try {
-      user = await prisma.user.create({
-        data: {
-          email,
-          name: credentials.name?.trim() || null,
-          passwordHash,
-          picture: null,
-        },
-      });
-    } catch (error) {
-      const isUniqueError =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: string }).code === 'P2002';
-
-      if (!isUniqueError) {
-        throw error;
-      }
-
-      const existingByEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingByEmail) {
-        throw new Error('EMAIL_ALREADY_EXISTS');
-      }
-
-      throw new Error('AUTH_STORAGE_CONFLICT');
-    }
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        name: credentials.name,
+      },
+    });
 
     return toSession(user);
   }
 }
 
 class EmailSignInStrategy implements EmailAuthStrategy {
-  async execute(credentials: EmailCredentials): Promise<AuthSession> {
+  async execute(credentials: EmailCredentials): Promise<AuthSession & { refreshToken: string }> {
     const email = normalizeEmail(credentials.email);
-    const user = await prisma.user.findUnique({ where: { email } });
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
     if (!user || !user.passwordHash) {
       throw new Error('INVALID_CREDENTIALS');
     }
 
-    const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
+    const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
 
-    if (!isValidPassword) {
+    if (!isValid) {
       throw new Error('INVALID_CREDENTIALS');
     }
 
@@ -456,7 +396,7 @@ class GoogleOAuthStrategy implements OAuthAuthorizationStrategy {
     };
   }
 
-  consumeExchangeCode(code: string): AuthSession {
+  consumeExchangeCode(code: string): AuthSession & { refreshToken: string } {
     this.cleanExpiredExchangeCodes();
 
     const entry = this.googleExchangeCodes.get(code);
@@ -466,7 +406,7 @@ class GoogleOAuthStrategy implements OAuthAuthorizationStrategy {
       throw new Error('GOOGLE_EXCHANGE_CODE_INVALID');
     }
 
-    return entry.session;
+    return entry.session as AuthSession & { refreshToken: string };
   }
 }
 
@@ -528,14 +468,14 @@ function createAuthStrategyFactory(): AuthStrategyFactory {
   return new AuthStrategyFactory(emailFactory, oauthFactory);
 }
 
-export async function signUpWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
+export async function signUpWithEmail(credentials: EmailCredentials & { name?: string }): Promise<AuthSession & { refreshToken: string }> {
   const factory = createAuthStrategyFactory();
-  return factory.createEmailStrategy('signup').execute(credentials);
+  return factory.createEmailStrategy('signup').execute(credentials) as Promise<AuthSession & { refreshToken: string }>;
 }
 
-export async function signInWithEmail(credentials: EmailCredentials): Promise<AuthSession> {
+export async function signInWithEmail(credentials: EmailCredentials): Promise<AuthSession & { refreshToken: string }> {
   const factory = createAuthStrategyFactory();
-  return factory.createEmailStrategy('signin').execute(credentials);
+  return factory.createEmailStrategy('signin').execute(credentials) as Promise<AuthSession & { refreshToken: string }>;
 }
 
 export function getGoogleAuthorizationUrl(source?: string, redirectOrigin?: string): string {
@@ -551,7 +491,7 @@ export async function completeGoogleAuthorization(
   return factory.createOAuthStrategy('google').completeAuthorization(code, state);
 }
 
-export function consumeGoogleExchangeCode(code: string): AuthSession {
+export function consumeGoogleExchangeCode(code: string): AuthSession & { refreshToken: string } {
   const factory = createAuthStrategyFactory();
-  return factory.createOAuthStrategy('google').consumeExchangeCode(code);
+  return factory.createOAuthStrategy('google').consumeExchangeCode(code) as AuthSession & { refreshToken: string };
 }

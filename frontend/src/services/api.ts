@@ -13,14 +13,16 @@ export type ApiRequestConfig = {
   params?: QueryParams
   headers?: Record<string, string>
   timeoutMs?: number
+  withCredentials?: boolean
 }
 
 type TokenGetter = () => string | null
 type UnauthorizedHandler = () => void
+type AccessTokenSetter = (token: string) => void
 
 let tokenGetter: TokenGetter = () => null
 let unauthorizedHandler: UnauthorizedHandler = () => undefined
-let unauthorizedTriggered = false
+let accessTokenSetter: AccessTokenSetter = () => undefined
 
 const DEFAULT_TIMEOUT_MS = 15000
 
@@ -31,6 +33,7 @@ type NormalizedRequest = {
   headers: Headers
   body?: BodyInit
   timeoutMs: number
+  withCredentials?: boolean
 }
 
 type RequestStrategy = {
@@ -76,6 +79,7 @@ class FetchRequestStrategy implements RequestStrategy {
         headers: request.headers,
         body: request.body,
         signal: controller.signal,
+        credentials: request.withCredentials ? 'include' : 'same-origin',
       })
 
       const payload = await parseResponsePayload(response)
@@ -111,20 +115,44 @@ class FetchRequestStrategy implements RequestStrategy {
   }
 }
 
+let isHandlingUnauthorized = false
+
 class HttpClientAdapter {
   constructor(
     private readonly strategy: RequestStrategy,
     private readonly baseUrl: string,
   ) {}
 
-  async request<T>(config: ApiRequestConfig): Promise<T> {
+  async request<T>(config: ApiRequestConfig, retryCount = 0): Promise<T> {
     const normalized = normalizeRequest(config, this.baseUrl, tokenGetter())
 
     try {
-      return await this.strategy.send<T>(normalized)
+      const result = await this.strategy.send<T>(normalized)
+      isHandlingUnauthorized = false
+      return result
     } catch (error) {
-      if (error instanceof ApiError) {
-        handleUnauthorized(error.status, normalized.rawUrl)
+      if (error instanceof ApiError && error.status === 401 && retryCount === 0 && !isAuthRequest(normalized.rawUrl) && !isHandlingUnauthorized) {
+         isHandlingUnauthorized = true
+         try {
+           const refreshResponse = await fetch(new URL('/auth/refresh', this.baseUrl).toString(), {
+               method: 'POST',
+               credentials: 'include',
+           })
+           if (refreshResponse.ok) {
+               const refreshPayload = await refreshResponse.json()
+               if (refreshPayload.accessToken) {
+                   accessTokenSetter(refreshPayload.accessToken)
+                   isHandlingUnauthorized = false
+                   return this.request(config, retryCount + 1)
+               }
+           }
+         } catch {
+             // pass to regular unauthorized handler
+         }
+
+         unauthorizedHandler()
+         setTimeout(() => { isHandlingUnauthorized = false }, 1000)
+         throw error
       }
 
       throw error
@@ -197,6 +225,7 @@ function normalizeRequest(
     headers,
     body,
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    withCredentials: config.withCredentials
   }
 }
 
@@ -236,26 +265,22 @@ function isAuthRequest(url: string): boolean {
   return (
     url.includes('/auth/login') ||
     url.includes('/auth/signup') ||
-    url.includes('/auth/google/exchange')
+    url.includes('/auth/google/exchange') ||
+    url.includes('/auth/refresh')
   )
 }
 
-function handleUnauthorized(status: number | undefined, requestUrl: string): void {
-  if (status !== 401 || isAuthRequest(requestUrl) || unauthorizedTriggered) {
-    return
-  }
-
-  unauthorizedTriggered = true
-  unauthorizedHandler()
-}
 
 export function setAccessTokenGetter(getter: TokenGetter): void {
   tokenGetter = getter
 }
 
+export function setAccessTokenSetter(setter: AccessTokenSetter): void {
+    accessTokenSetter = setter
+}
+
 export function setUnauthorizedHandler(handler: UnauthorizedHandler): void {
   unauthorizedHandler = handler
-  unauthorizedTriggered = false
 }
 
 export const apiClient = new HttpClientAdapter(

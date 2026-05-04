@@ -20,7 +20,7 @@ import {
   signInWithPassword,
   signUpWithPassword,
 } from '@/services/auth.transport'
-import { setAccessTokenGetter, setUnauthorizedHandler } from '@/services/api'
+import { setAccessTokenGetter, setUnauthorizedHandler, setAccessTokenSetter } from '@/services/api'
 import {
   clearPersistedSession,
   persistSession,
@@ -43,17 +43,25 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch()
-  const { status } = useAppSelector((state) => state.auth)
+  const { status, accessToken, user } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
-    const session = readPersistedSession()
+    const persistedSession = readPersistedSession()
 
-    if (session) {
-      dispatch(setSession(session))
-      setAccessTokenGetter(() => session.accessToken)
+    if (persistedSession) {
+      dispatch(setSession(persistedSession))
+      setAccessTokenGetter(() => persistedSession.accessToken)
     } else {
       dispatch(finishAuthBootstrap())
     }
+
+    setAccessTokenSetter((token: string) => {
+       if (persistedSession) {
+           persistedSession.accessToken = token;
+           dispatch(setSession({...persistedSession}))
+           setAccessTokenGetter(() => token)
+       }
+    })
 
     setUnauthorizedHandler(() => {
       clearPersistedSession()
@@ -73,13 +81,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [dispatch])
 
+  useEffect(() => {
+     if (accessToken) {
+         setAccessTokenGetter(() => accessToken)
+     }
+  }, [accessToken])
+
+
   const signIn = useCallback(
     async (email: string, password: string) => {
       dispatch(setAuthLoading())
       try {
-        const session = await signInWithPassword({ email, password })
-        dispatch(setSession(session))
-        persistSession(session)
+        const result = await signInWithPassword({ email, password })
+        dispatch(setSession(result))
+        persistSession(result)
       } catch (error) {
         dispatch(setAuthError(formatAuthError(error, 'Sign in failed')))
         throw error
@@ -92,9 +107,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async (name: string, email: string, password: string) => {
       dispatch(setAuthLoading())
       try {
-        const session = await signUpWithPassword({ name, email, password })
-        dispatch(setSession(session))
-        persistSession(session)
+        const result = await signUpWithPassword({ name, email, password })
+        dispatch(setSession(result))
+        persistSession(result)
       } catch (error) {
         dispatch(setAuthError(formatAuthError(error, 'Sign up failed')))
         throw error
@@ -113,9 +128,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       dispatch(setAuthLoading())
 
       try {
-        const session = await exchangeGoogleAuthCode(exchangeCode)
-        dispatch(setSession(session))
-        persistSession(session)
+        const result = await exchangeGoogleAuthCode(exchangeCode)
+        dispatch(setSession(result))
+        persistSession(result)
       } catch (error) {
         dispatch(setAuthError(formatAuthError(error, 'Google sign-in failed')))
         throw error

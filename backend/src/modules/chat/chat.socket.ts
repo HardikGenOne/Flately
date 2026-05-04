@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
-import { sendMessage } from './chat.service';
+import { sendMessage, validateUserInMatch } from './chat.service';
 import { ClientToServerEvents, ServerToClientEvents, SendMessagePayload } from '../../types/socket';
+import { AuthenticatedSocket } from '../../middlewares/socket-auth.middleware';
 
 const chatSocketEvents = {
   joinCanonical: 'joinRoom',
@@ -11,16 +12,42 @@ const chatSocketEvents = {
   messageAlias: 'new_message',
 } as const;
 
+function safeHandler(
+  socket: AuthenticatedSocket,
+  handler: (...args: any[]) => Promise<void>
+): (...args: any[]) => void {
+  return (...args) => {
+    handler(...args).catch((err: Error) => {
+      console.error('[Socket] Handler error:', err);
+      socket.emit('error' as any, { code: 'SERVER_ERROR', message: err.message });
+    });
+  };
+}
+
 export default function registerChatSocket(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
 ): void {
   io.on('connection', (socket) => {
-    const joinConversation = (conversationId: string) => {
-      socket.join(conversationId);
+    const authSocket = socket as AuthenticatedSocket;
+    const userId = authSocket.userId;
+
+    const joinConversation = async (conversationId: string) => {
+      const isParticipant = await validateUserInMatch(conversationId, userId);
+      if (isParticipant) {
+        socket.join(conversationId);
+      } else {
+        socket.emit('error' as any, { code: 'NOT_A_PARTICIPANT' });
+      }
     };
 
-    const handleSendMessage = async ({ conversationId, senderId, content }: SendMessagePayload) => {
-      const msg = await sendMessage(conversationId, senderId, content);
+    const handleSendMessage = async ({ conversationId, content }: SendMessagePayload) => {
+      const isParticipant = await validateUserInMatch(conversationId, userId);
+      if (!isParticipant) {
+        socket.emit('error' as any, { code: 'NOT_A_PARTICIPANT' });
+        return;
+      }
+
+      const msg = await sendMessage(conversationId, userId, content);
       const payload = {
         id: msg.id,
         senderId: msg.senderId,
@@ -33,10 +60,10 @@ export default function registerChatSocket(
       io.to(conversationId).emit(chatSocketEvents.messageAlias, payload);
     };
 
-    socket.on(chatSocketEvents.joinCanonical, joinConversation);
-    socket.on(chatSocketEvents.joinAlias, joinConversation);
+    socket.on(chatSocketEvents.joinCanonical, safeHandler(authSocket, joinConversation));
+    socket.on(chatSocketEvents.joinAlias, safeHandler(authSocket, joinConversation));
 
-    socket.on(chatSocketEvents.sendCanonical, handleSendMessage);
-    socket.on(chatSocketEvents.sendAlias, handleSendMessage);
+    socket.on(chatSocketEvents.sendCanonical, safeHandler(authSocket, handleSendMessage));
+    socket.on(chatSocketEvents.sendAlias, safeHandler(authSocket, handleSendMessage));
   });
 }

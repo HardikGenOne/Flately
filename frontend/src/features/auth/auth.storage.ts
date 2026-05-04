@@ -1,6 +1,6 @@
 import type { AuthSession } from '@/types'
 
-export const AUTH_SESSION_STORAGE_KEY = 'flately.auth.session.v1'
+const SESSION_KEY = 'flately.user.v2'
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined'
@@ -10,57 +10,50 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isAuthSession(value: unknown): value is AuthSession {
-  if (!isRecord(value)) {
-    return false
+export function persistUserMeta(user: { id: string; email: string; name: string | null; picture: string | null }): void {
+  if (!isBrowser()) {
+    return
   }
-
-  const record = value
-  const user = isRecord(record.user) ? record.user : undefined
-
-  return (
-    typeof record.accessToken === 'string' &&
-    user !== undefined &&
-    typeof user?.id === 'string' &&
-    typeof user?.email === 'string'
-  )
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(user))
 }
 
-export function readPersistedSession(): AuthSession | null {
+export function getPersistedUserMeta(): { id: string; email: string; name: string | null; picture: string | null } | null {
   if (!isBrowser()) {
     return null
   }
-
-  const raw = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
-  if (!raw) {
-    return null
-  }
-
+  const raw = window.localStorage.getItem(SESSION_KEY)
   try {
-    const parsed = JSON.parse(raw)
-    if (isAuthSession(parsed)) {
-      return parsed
-    }
+      return raw ? JSON.parse(raw) : null
   } catch {
-    // Ignore corrupt session payloads and treat as signed out.
+      return null
   }
-
-  window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
-  return null
 }
 
+export function clearPersistedUserMeta(): void {
+  if (!isBrowser()) {
+    return
+  }
+  window.localStorage.removeItem(SESSION_KEY)
+  window.localStorage.removeItem('flately.auth.session.v1')
+}
+
+// Deprecated compatibility methods to keep slice working.
 export function persistSession(session: AuthSession): void {
-  if (!isBrowser()) {
-    return
-  }
-
-  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session))
+  if (!session.user) return
+  persistUserMeta({
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name ?? null,
+      picture: session.user.picture ?? null
+  })
 }
-
 export function clearPersistedSession(): void {
-  if (!isBrowser()) {
-    return
-  }
-
-  window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY)
+  clearPersistedUserMeta()
+}
+export function readPersistedSession(): AuthSession | null {
+    const user = getPersistedUserMeta();
+    if (user) {
+        return { accessToken: '', user } // AccessToken will be requested via refresh endpoint
+    }
+    return null;
 }

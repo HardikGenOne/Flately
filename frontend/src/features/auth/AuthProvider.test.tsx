@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-describe('matching.service', () => {
+describe('AuthProvider', () => {
     it('is a placeholder', () => {
         expect(1).toBe(1)
     })

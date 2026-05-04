@@ -4,16 +4,15 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "config": { "distDir": "dist" }
     }
   ],
   "routes": [
     { "handle": "filesystem" },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ]
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "env": {
+    "VITE_API_BASE_URL": "@flately_api_url",
+    "VITE_SOCKET_URL": "@flately_socket_url"
+  }
 }
