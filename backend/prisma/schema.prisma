@@ -18,6 +18,11 @@ model User {
     updatedAt DateTime @updatedAt
 
     profile Profile?
+    preference Preference?
+    swipesFrom Swipe[] @relation("SwipeFrom")
+    swipesTo Swipe[] @relation("SwipeTo")
+    matchesA Match[] @relation("MatchUserA")
+    matchesB Match[] @relation("MatchUserB")
 }
 
 
@@ -49,12 +54,13 @@ model Profile {
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    user User @relation(fields: [userId], references: [id])
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Preference {
     id String @id @default(auto()) @map("_id") @db.ObjectId
     userId String @unique @db.ObjectId
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     // Hard constraints 
     genderPreference String // male | female | any
@@ -88,6 +94,9 @@ model Swipe {
   fromUserId String  @db.ObjectId
   toUserId   String  @db.ObjectId
 
+  fromUser   User    @relation("SwipeFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User    @relation("SwipeTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
   action     String  // "like" | "skip"
 
   createdAt DateTime @default(now())
@@ -103,7 +112,11 @@ model Match{
     userAId String @db.ObjectId
     userBId String @db.ObjectId
 
+    userA User @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+    userB User @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
     createdAt DateTime @default(now())
+    conversation Conversation?
 
 
     @@unique([userAId, userBId])
@@ -114,6 +127,7 @@ model Match{
 model Conversation {
     id String @id @default(auto()) @map("_id") @db.ObjectId
     matchId String @unique @db.ObjectId
+    match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
     messages Message[]
 }
@@ -125,5 +139,5 @@ model Message {
     content        String
     createdAt      DateTime @default(now())
 
-    conversation   Conversation @relation(fields: [conversationId], references: [id])
+    conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }

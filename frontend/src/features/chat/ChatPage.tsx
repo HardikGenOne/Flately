@@ -165,7 +165,6 @@ export function ChatPage() {
     }
 
     socket.on('message', onMessage)
-    socket.on('new_message', onMessage)
 
     return () => {
       socket.off('connect', onConnect)
@@ -173,7 +172,6 @@ export function ChatPage() {
       socket.off('connect_error', onConnectError)
       socket.io.off('reconnect_attempt', onReconnectAttempt)
       socket.off('message', onMessage)
-      socket.off('new_message', onMessage)
     }
   }, [chatData?.conversation?.id])
 
@@ -199,7 +197,6 @@ export function ChatPage() {
     try {
       socket.emit('sendMessage', {
         conversationId: chatData.conversation.id,
-        senderId: currentUserId,
         content,
       })
 

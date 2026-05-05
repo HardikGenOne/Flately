@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
 import env from './config/env';
+import { getRedisClient } from './config/redis';
 
 import profileRoutes from './modules/profiles/profiles.routes';
 import preferenceRoutes from './modules/preferences/preferences.routes';
@@ -13,6 +15,7 @@ import discoveryRoutes from './modules/discovery/discovery.routes';
 import chatRoutes from './modules/chat/chat.routes';
 import authRoutes from './modules/auth/auth.routes';
 import uploadsRoutes from './modules/uploads/uploads.routes';
+import { domainErrorMiddleware } from './middlewares/domain-error.middleware';
 
 function buildAllowedOrigins(): string[] {
   const defaults = [
@@ -62,10 +65,28 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => getRedisClient().call(args[0], ...args.slice(1)) as any,
+    prefix: 'rl:',
+  }),
 });
 
-app.use(limiter);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => getRedisClient().call(args[0], ...args.slice(1)) as any,
+    prefix: 'rl_auth:',
+  }),
+  message: { error: 'TOO_MANY_REQUESTS', retryAfter: '15 minutes' },
+});
+
 app.use(express.json());
+app.use('/auth/login', authLimiter);
+app.use('/auth/signup', authLimiter);
+app.use(limiter);
 app.use('/auth', authRoutes);
 app.use('/uploads', uploadsRoutes);
 app.use('/matching', matchingRoutes);
@@ -78,5 +99,7 @@ app.use('/preferences', preferenceRoutes);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use(domainErrorMiddleware as any);
 
 export default app;

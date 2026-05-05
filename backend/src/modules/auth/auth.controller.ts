@@ -6,7 +6,7 @@ import {
   getGoogleAuthorizationUrl,
   signInWithEmail,
   signUpWithEmail,
-} from './auth.service.js';
+} from './auth.service';
 
 const GOOGLE_CALLBACK_ROUTE = '/auth/callback';
 
@@ -83,7 +83,14 @@ export async function signup(req: Request, res: Response): Promise<void> {
       name,
     });
 
-    res.status(201).json(session);
+    res.cookie('flately_refresh', session.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/auth/refresh',
+    })
+    res.status(201).json({ accessToken: session.accessToken, user: session.user });
     return;
   } catch (error) {
     sendError(res, error, 'Signup failed');
@@ -107,7 +114,14 @@ export async function login(req: Request, res: Response): Promise<void> {
       password,
     });
 
-    res.status(200).json(session);
+    res.cookie('flately_refresh', session.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/auth/refresh',
+    })
+    res.status(200).json({ accessToken: session.accessToken, user: session.user });
     return;
   } catch (error) {
     sendError(res, error, 'Login failed');
@@ -176,9 +190,48 @@ export function exchangeGoogleCode(req: Request, res: Response): void {
 
   try {
     const session = consumeGoogleExchangeCode(code);
-    res.status(200).json(session);
+    res.cookie('flately_refresh', session.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/auth/refresh',
+    })
+    res.status(200).json({ accessToken: session.accessToken, user: session.user });
     return;
   } catch (error) {
     sendError(res, error, 'Google exchange failed');
   }
+}
+
+export async function refresh(req: Request, res: Response): Promise<void> {
+    // Basic implementation for the /auth/refresh endpoint. This reads cookies from req.cookies
+    // if a cookie parser middleware is used.
+    const rawCookies = req.headers.cookie;
+    if (!rawCookies) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    const match = rawCookies.match(/(?:^|;) *flately_refresh=([^;]*)/);
+    const refreshToken = match ? decodeURIComponent(match[1]) : undefined;
+    if (!refreshToken) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+      return;
+    }
+    try {
+      const jwt = require('jsonwebtoken');
+      const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as any;
+      if (payload.type !== 'refresh') {
+        res.status(401).json({ error: 'UNAUTHORIZED' });
+        return;
+      }
+      const newAccessToken = jwt.sign(
+        { sub: payload.sub },
+        env.JWT_ACCESS_SECRET,
+        { expiresIn: env.JWT_ACCESS_EXPIRES_IN }
+      );
+      res.status(200).json({ accessToken: newAccessToken });
+    } catch {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
+    }
 }

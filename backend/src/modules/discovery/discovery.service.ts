@@ -2,6 +2,7 @@ import prisma from '../../config/prisma';
 import { checkAndCreateMatch } from '../matches/matches.service';
 import { assertOnboardingCompleted } from '../matching/matching.service';
 import { findMatchesForUser } from '../matching/matching.service';
+import { getCachedFeed, setCachedFeed, invalidateFeedCacheForSwipe } from '../../config/cache';
 
 interface MatchCandidate {
   userId: string;
@@ -37,6 +38,17 @@ export class DiscoveryService {
   ) {}
 
   async getDiscoveryFeed(userId: string) {
+    const cached = await getCachedFeed(userId);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    const feed = await this.computeDiscoveryFeed(userId);
+    await setCachedFeed(userId, feed);
+    return feed;
+  }
+
+  private async computeDiscoveryFeed(userId: string) {
     const swipes = await prisma.swipe.findMany({
       where: { fromUserId: userId },
       select: { toUserId: true },
@@ -77,8 +89,7 @@ export class DiscoveryService {
       preferences.map((preference) => [preference.userId, preference]),
     );
 
-    const enrichedProfiles = await Promise.all(
-      filtered.map(async (match) => {
+    const enrichedProfiles = filtered.map((match) => {
         const profile = profileByUserId.get(match.userId);
         const preference = preferenceByUserId.get(match.userId) ?? null;
 
@@ -105,8 +116,7 @@ export class DiscoveryService {
           budgetMax: preference?.maxBudget || 0,
           tags: this.generateTags(profile, preference),
         };
-      }),
-    );
+      });
 
     return enrichedProfiles.filter(Boolean);
   }
@@ -139,6 +149,8 @@ export class DiscoveryService {
       const result = await this.dependencies.checkAndCreateMatch(fromUserId, toUserId);
       matched = result?.matched || false;
     }
+
+    await invalidateFeedCacheForSwipe(fromUserId, toUserId);
 
     return { swipe, matched };
   }

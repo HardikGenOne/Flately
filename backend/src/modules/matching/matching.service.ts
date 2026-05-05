@@ -232,17 +232,29 @@ export class MatchingService {
   ) {}
 
   async findMatchesForUser(userId: string) {
-    const userProfile = await prisma.profile.findUnique({ where: { userId } });
-    const userPref = await prisma.preference.findUnique({ where: { userId } });
+    const [userProfile, userPref] = await Promise.all([
+      prisma.profile.findUnique({ where: { userId } }),
+      prisma.preference.findUnique({ where: { userId } }),
+    ]);
 
     if (!userProfile || !userPref || !userProfile.onboardingCompleted) {
       throw new Error('ONBOARDING_REQUIRED');
     }
 
+    const swipedIds = await prisma.swipe.findMany({
+      where: { fromUserId: userId },
+      select: { toUserId: true },
+    });
+    const excludeIds = new Set([userId, ...swipedIds.map((s) => s.toUserId)]);
+
     let candidateProfiles: ProfileRecord[] = [];
     try {
       candidateProfiles = await prisma.profile.findMany({
-        where: { userId: { not: userId } },
+        where: {
+          userId: { notIn: Array.from(excludeIds) },
+          city: userProfile.city,
+          onboardingCompleted: true,
+        },
         select: {
           userId: true,
           city: true,
@@ -257,7 +269,11 @@ export class MatchingService {
       await repairLegacyProfileTimestamps();
 
       candidateProfiles = await prisma.profile.findMany({
-        where: { userId: { not: userId } },
+        where: {
+          userId: { notIn: Array.from(excludeIds) },
+          city: userProfile.city,
+          onboardingCompleted: true,
+        },
         select: {
           userId: true,
           city: true,
@@ -265,7 +281,15 @@ export class MatchingService {
         },
       });
     }
-    const candidatePrefs = await prisma.preference.findMany();
+
+    if (candidateProfiles.length === 0) return [];
+
+    const candidateUserIds = candidateProfiles.map((p) => p.userId);
+
+    const candidatePrefs = await prisma.preference.findMany({
+      where: { userId: { in: candidateUserIds } },
+    });
+
     const viewerCandidate = mapToCandidateShape(userProfile, userPref);
     const viewerPreference = mapToPreferenceShape(userPref);
     const candidatePreferencesByUserId = buildPreferenceLookup(candidatePrefs);
